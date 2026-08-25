@@ -1,2 +1,2 @@
-# Mp-Detect
-Edge AI / Computer vision pipeline for microplastic detection and quantification.
+[Download Project Assets from Google Drive]
+https://drive.google.com/drive/folders/1GQxtqUJavVlL_n6gHiRzwvTUOWCLO-tB?usp=drive_link
