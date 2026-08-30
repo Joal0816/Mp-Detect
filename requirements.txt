@@ -1,0 +1,6 @@
+kivy==2.3.0
+kivymd==1.2.0
+opencv-python-headless
+onnxruntime
+numpy
+pillow

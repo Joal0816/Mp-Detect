@@ -1,0 +1,938 @@
+WindowManager:
+    HomeScreen:
+    CameraScreen:
+    UploadScreen:
+    RecentScreen:
+    PreviewScreen:
+    MenuScreen:
+    ParametersScreen:
+    AboutScreen:
+
+<SaveDialogContent>:
+    orientation: "vertical"
+    spacing: "12dp"
+    size_hint_y: None
+    height: "120dp"
+
+    MDTextField:
+        id: file_name
+        hint_text: "File Name"
+        text: root.default_name
+
+    MDBoxLayout:
+        orientation: "horizontal"
+        spacing: "8dp"
+
+        MDTextField:
+            id: folder_name
+            hint_text: "Folder Name"
+            text: "MP Detect"
+            size_hint_x: 0.85
+
+        MDIconButton:
+            icon: "folder-search-outline"
+            size_hint_x: 0.15
+            pos_hint: {"center_y": 0.5}
+            on_release: app.show_folder_selection(folder_name)
+            tooltip_text: "Select existing folder"
+
+<HomeScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        spacing: "12dp"
+
+        MDTopAppBar:
+            title: ""
+            elevation: 0
+            left_action_items: [["menu", lambda *_: app.go("menu", "right")]]
+
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: "24dp"
+            padding: "24dp"
+
+            Image:
+                source: "assets/app_icon.png"
+                size_hint: None, None
+                size: "100dp", "100dp"
+                pos_hint: {"center_x": 0.5}
+
+            MDLabel:
+                text: "MP Detect"
+                halign: "center"
+                theme_text_color: "Primary"
+                font_style: "H4"
+                bold: True
+                size_hint_y: None
+                height: "48dp"
+
+            MDCard:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: "80dp"
+                padding: "16dp"
+                spacing: "16dp"
+                elevation: 2
+                ripple_behavior: True
+                on_release: app.go("camera", "left")
+
+                MDIcon:
+                    icon: "camera"
+                    theme_text_color: "Primary"
+                    size_hint_x: None
+                    width: "48dp"
+                    pos_hint: {"center_y": 0.5}
+
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: "4dp"
+
+                    MDLabel:
+                        text: "Real-time"
+                        font_style: "H6"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: "24dp"
+
+                    MDLabel:
+                        text: "Use camera for live detection"
+                        theme_text_color: "Secondary"
+                        font_style: "Caption"
+                        size_hint_y: None
+                        height: "16dp"
+
+            MDCard:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: "80dp"
+                padding: "16dp"
+                spacing: "16dp"
+                elevation: 2
+                ripple_behavior: True
+                on_release: app.go("upload", "left")
+
+                MDIcon:
+                    icon: "upload"
+                    theme_text_color: "Primary"
+                    size_hint_x: None
+                    width: "48dp"
+                    pos_hint: {"center_y": 0.5}
+
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: "4dp"
+
+                    MDLabel:
+                        text: "Upload & Detect"
+                        font_style: "H6"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: "24dp"
+
+                    MDLabel:
+                        text: "Select image or video file"
+                        theme_text_color: "Secondary"
+                        font_style: "Caption"
+                        size_hint_y: None
+                        height: "16dp"
+
+            MDCard:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: "80dp"
+                padding: "16dp"
+                spacing: "16dp"
+                elevation: 2
+                ripple_behavior: True
+                on_release: app.go("recent", "left")
+
+                MDIcon:
+                    icon: "history"
+                    theme_text_color: "Primary"
+                    size_hint_x: None
+                    width: "48dp"
+                    pos_hint: {"center_y": 0.5}
+
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: "4dp"
+
+                    MDLabel:
+                        text: "Recent Results"
+                        font_style: "H6"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: "24dp"
+
+                    MDLabel:
+                        text: "View saved detection results"
+                        theme_text_color: "Secondary"
+                        font_style: "Caption"
+                        size_hint_y: None
+                        height: "16dp"
+
+            Widget:
+
+<CameraScreen>:
+    on_enter: app.camera_init()
+    on_leave: app.camera_cleanup()
+
+    MDBoxLayout:
+        orientation: "vertical"
+        spacing: "0dp"
+
+        MDTopAppBar:
+            id: camera_toolbar
+            title: "Real-time"
+            anchor_title: "left"
+            elevation: 2
+            left_action_items: [["arrow-left", lambda *_: app.go("home", "right")]]
+            right_action_items: [["stop" if app.detection_active else "play", lambda *_: app.toggle_detection_state()]]
+
+        MDBoxLayout:
+            size_hint_y: 0.55
+            md_bg_color: 0, 0, 0, 1
+            Image:
+                id: camera_image
+                allow_stretch: True
+                keep_ratio: True
+
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: "60dp"
+            padding: "20dp"
+            spacing: "40dp"
+            md_bg_color: 0.95, 0.95, 0.95, 1
+            pos_hint: {"center_x": 0.5}
+
+            MDIconButton:
+                icon: "camera"
+                theme_text_color: "Custom"
+                text_color: app.theme_cls.primary_color
+                user_font_size: "32sp"
+                pos_hint: {"center_y": 0.5}
+                on_release: app.take_snapshot()
+
+            MDLabel:
+                id: timer_label
+                text: "00:00"
+                halign: "center"
+                theme_text_color: "Secondary"
+                font_style: "H6"
+                opacity: 0
+
+            MDIconButton:
+                id: record_btn
+                icon: "stop-circle-outline" if app.recording_active else "record-circle-outline"
+                theme_text_color: "Custom"
+                text_color: (0, 0, 0, 1)
+                user_font_size: "32sp"
+                pos_hint: {"center_y": 0.5}
+                on_release: app.toggle_recording()
+
+        # --- SCROLLABLE RESULTS AREA ---
+        ScrollView:
+            size_hint_y: 0.45
+
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: "8dp"
+                spacing: "4dp"
+                size_hint_y: None
+                height: self.minimum_height
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: "24dp"
+
+                    MDLabel:
+                        id: total_label
+                        text: "Total: 0"
+                        font_style: "Subtitle2"
+                        halign: "left"
+
+                    MDLabel:
+                        id: avg_label
+                        text: "Avg Conf: 0.00"
+                        font_style: "Subtitle2"
+                        halign: "right"
+                        theme_text_color: "Secondary"
+
+                MDSeparator:
+
+                GridLayout:
+                    cols: 3
+                    size_hint_y: None
+                    height: "20dp"
+                    spacing: "0dp"
+                    MDLabel:
+                        text: "Type"
+                        bold: True
+                        size_hint_x: 0.4
+                        font_style: "Caption"
+                    MDLabel:
+                        text: "Count"
+                        bold: True
+                        halign: "center"
+                        size_hint_x: 0.3
+                        font_style: "Caption"
+                    MDLabel:
+                        text: "Avg Conf"
+                        bold: True
+                        halign: "center"
+                        size_hint_x: 0.3
+                        font_style: "Caption"
+
+                GridLayout:
+                    cols: 3
+                    size_hint_y: None
+                    height: "132dp"
+                    spacing: "0dp"
+                    # PET
+                    MDLabel:
+                        text: "PET"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: pet_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: pet_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    # HDPE
+                    MDLabel:
+                        text: "HDPE"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: hdpe_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: hdpe_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    # PVC
+                    MDLabel:
+                        text: "PVC"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: pvc_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: pvc_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    # LDPE
+                    MDLabel:
+                        text: "LDPE"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: ldpe_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: ldpe_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    # PP
+                    MDLabel:
+                        text: "PP"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: pp_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: pp_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    # PS
+                    MDLabel:
+                        text: "PS"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: ps_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: ps_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+
+                MDSeparator:
+                    height: "24dp"
+
+                MDLabel:
+                    id: performance_stats
+                    text: ""
+                    halign: "center"
+                    theme_text_color: "Secondary"
+                    font_style: "Caption"
+                    size_hint_y: None
+                    height: "32dp"
+
+<UploadScreen>:
+    on_leave: app.reset_upload_screen()
+
+    MDBoxLayout:
+        orientation: "vertical"
+        spacing: "0dp"
+
+        MDTopAppBar:
+            id: upload_toolbar
+            title: "Upload & Detect"
+            anchor_title: "left"
+            elevation: 2
+            left_action_items: [["arrow-left", lambda *_: app.go("home", "right")]]
+
+        MDRelativeLayout:
+            size_hint_y: 0.45
+            md_bg_color: 0, 0, 0, 1
+            Image:
+                id: upload_image
+                source: ""
+                allow_stretch: True
+                keep_ratio: True
+                size_hint: 1, 1
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                opacity: 1 if app.upload_state != "empty" else 0
+            MDLabel:
+                text: "Processing..."
+                halign: "center"
+                theme_text_color: "Custom"
+                text_color: 1, 1, 1, 1
+                font_style: "H5"
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                opacity: 1 if app.is_processing else 0
+            MDBoxLayout:
+                orientation: "vertical"
+                spacing: "12dp"
+                size_hint: None, None
+                size: "250dp", "120dp"
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                opacity: 1 if app.upload_state == "empty" and not app.is_processing else 0
+                disabled: app.upload_state != "empty"
+                MDIcon:
+                    icon: "image-search-outline"
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 0.5
+                    font_size: "64sp"
+                    halign: "center"
+                    pos_hint: {"center_x": 0.5}
+                MDLabel:
+                    text: "No Image/Video Selected"
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 0.5
+                    halign: "center"
+                    font_style: "H6"
+
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: "64dp"
+            padding: "16dp"
+            spacing: "16dp"
+            md_bg_color: 0.95, 0.95, 0.95, 1
+            MDRaisedButton:
+                id: action_btn
+                text: "Select File" if app.upload_state == "empty" else ("Analyze" if app.upload_state == "selected" else "Select Another")
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 1.0
+                height: "48dp"
+                disabled: app.is_processing
+                on_release: app.handle_upload_action()
+
+        # --- SCROLLABLE RESULTS AREA ---
+        ScrollView:
+            size_hint_y: 0.55
+
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: "8dp"
+                spacing: "4dp"
+                size_hint_y: None
+                height: self.minimum_height
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: "24dp"
+
+                    MDLabel:
+                        id: total_label
+                        text: "Total: 0"
+                        font_style: "Subtitle2"
+                        halign: "left"
+
+                    MDLabel:
+                        id: avg_label
+                        text: "Avg Conf: 0.00"
+                        font_style: "Subtitle2"
+                        halign: "right"
+                        theme_text_color: "Secondary"
+
+                MDSeparator:
+
+                GridLayout:
+                    cols: 3
+                    size_hint_y: None
+                    height: "20dp"
+                    spacing: "0dp"
+                    MDLabel:
+                        text: "Type"
+                        bold: True
+                        size_hint_x: 0.4
+                        font_style: "Caption"
+                    MDLabel:
+                        text: "Count"
+                        bold: True
+                        halign: "center"
+                        size_hint_x: 0.3
+                        font_style: "Caption"
+                    MDLabel:
+                        text: "Avg Conf"
+                        bold: True
+                        halign: "center"
+                        size_hint_x: 0.3
+                        font_style: "Caption"
+
+                GridLayout:
+                    cols: 3
+                    size_hint_y: None
+                    height: "132dp"
+                    spacing: "0dp"
+                    # PET
+                    MDLabel:
+                        text: "PET"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: pet_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: pet_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    # HDPE
+                    MDLabel:
+                        text: "HDPE"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: hdpe_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: hdpe_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    # PVC
+                    MDLabel:
+                        text: "PVC"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: pvc_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: pvc_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    # LDPE
+                    MDLabel:
+                        text: "LDPE"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: ldpe_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: ldpe_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    # PP
+                    MDLabel:
+                        text: "PP"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: pp_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: pp_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    # PS
+                    MDLabel:
+                        text: "PS"
+                        font_style: "Body2"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: ps_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: ps_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body2"
+                        size_hint_x: 0.3
+
+                MDSeparator:
+                    height: "24dp"
+
+                MDLabel:
+                    id: performance_stats
+                    text: ""
+                    halign: "center"
+                    theme_text_color: "Secondary"
+                    font_style: "Caption"
+                    size_hint_y: None
+                    height: "32dp"
+
+<RecentScreen>:
+    on_enter: app.recent_refresh()
+
+    MDBoxLayout:
+        orientation: "vertical"
+        spacing: "8dp"
+
+        MDTopAppBar:
+            title: "Recent Results"
+            id: recent_toolbar
+            anchor_title: "left"
+            elevation: 2
+            left_action_items: [["arrow-left", lambda *_: app.recent_back_nav()]]
+            right_action_items: [["sort", lambda *_: app.show_sort_menu()]]
+
+        ScrollView:
+            MDList:
+                id: recent_list
+
+<PreviewScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        md_bg_color: 0, 0, 0, 1
+
+        MDTopAppBar:
+            id: preview_toolbar
+            title: "Preview"
+            anchor_title: "left"
+            elevation: 2
+            left_action_items: [["arrow-left", lambda *_: app.go("recent", "right")]]
+
+        BoxLayout:
+            id: preview_container
+            size_hint: 1, 1
+
+<MenuScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        spacing: "12dp"
+
+        MDTopAppBar:
+            title: "Menu"
+            anchor_title: "left"
+            elevation: 2
+            left_action_items: [["arrow-left", lambda *_: app.go("home", "left")]]
+
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: "16dp"
+            padding: "24dp"
+
+            MDLabel:
+                text: "Settings & Information"
+                halign: "center"
+                theme_text_color: "Primary"
+                font_style: "H6"
+                size_hint_y: None
+                height: "40dp"
+
+            MDCard:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: "80dp"
+                padding: "16dp"
+                spacing: "16dp"
+                elevation: 2
+                ripple_behavior: True
+                on_release: app.go("parameters", "left")
+
+                MDIcon:
+                    icon: "tune"
+                    theme_text_color: "Primary"
+                    size_hint_x: None
+                    width: "48dp"
+                    pos_hint: {"center_y": 0.5}
+
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: "4dp"
+
+                    MDLabel:
+                        text: "Parameters"
+                        font_style: "H6"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: "24dp"
+
+                    MDLabel:
+                        text: "Configure detection settings"
+                        theme_text_color: "Secondary"
+                        font_style: "Caption"
+                        size_hint_y: None
+                        height: "16dp"
+
+            MDCard:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: "80dp"
+                padding: "16dp"
+                spacing: "16dp"
+                elevation: 2
+                ripple_behavior: True
+                on_release: app.go("about", "left")
+
+                MDIcon:
+                    icon: "information"
+                    theme_text_color: "Primary"
+                    size_hint_x: None
+                    width: "48dp"
+                    pos_hint: {"center_y": 0.5}
+
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: "4dp"
+
+                    MDLabel:
+                        text: "About app"
+                        font_style: "H6"
+                        theme_text_color: "Primary"
+                        size_hint_y: None
+                        height: "24dp"
+
+                    MDLabel:
+                        text: "App information and details"
+                        theme_text_color: "Secondary"
+                        font_style: "Caption"
+                        size_hint_y: None
+                        height: "16dp"
+
+            Widget:
+
+<ParametersScreen>:
+    on_enter: app.parameters_fill()
+
+    MDBoxLayout:
+        orientation: "vertical"
+        spacing: "12dp"
+
+        MDTopAppBar:
+            title: "Parameters"
+            anchor_title: "left"
+            elevation: 2
+            left_action_items: [["arrow-left", lambda *_: app.go("menu", "right")]]
+
+        ScrollView:
+            MDBoxLayout:
+                orientation: "vertical"
+                spacing: "16dp"
+                padding: "16dp"
+                size_hint_y: None
+                height: self.minimum_height
+
+                MDLabel:
+                    text: "Detection Parameters"
+                    font_style: "H6"
+                    size_hint_y: None
+                    height: "40dp"
+
+                MDTextField:
+                    id: conf_input
+                    text: "0.25"
+                    hint_text: "Confidence threshold (0.0 - 1.0)"
+                    mode: "rectangle"
+                    size_hint_y: None
+                    height: "56dp"
+
+                MDTextField:
+                    id: iou_input
+                    text: "0.45"
+                    hint_text: "IoU threshold (0.0 - 1.0)"
+                    mode: "rectangle"
+                    size_hint_y: None
+                    height: "56dp"
+
+                MDTextField:
+                    id: imgsz_input
+                    text: "640"
+                    hint_text: "Image size"
+                    mode: "rectangle"
+                    size_hint_y: None
+                    height: "56dp"
+                    readonly: True
+                    on_focus: if self.focus: app.show_imgsz_menu()
+                    icon_right: "menu-down"
+
+                MDRectangleFlatButton:
+                    text: "Save Parameters"
+                    pos_hint: {"center_x": 0.5}
+                    size_hint_y: None
+                    height: "48dp"
+                    on_release: app.parameters_save(conf_input.text, iou_input.text, imgsz_input.text)
+
+<AboutScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        spacing: "12dp"
+
+        MDTopAppBar:
+            title: "About app"
+            anchor_title: "left"
+            elevation: 2
+            left_action_items: [["arrow-left", lambda *_: app.go("menu", "right")]]
+
+        ScrollView:
+            MDBoxLayout:
+                orientation: "vertical"
+                spacing: "24dp"
+                padding: "24dp"
+                size_hint_y: None
+                height: self.minimum_height
+
+                Image:
+                    source: "assets/app_icon.png"
+                    size_hint: None, None
+                    size: "80dp", "80dp"
+                    pos_hint: {"center_x": 0.5}
+
+                MDLabel:
+                    text: "MP Detect"
+                    font_style: "H4"
+                    halign: "center"
+                    size_hint_y: None
+                    height: "48dp"
+
+                MDLabel:
+                    text: "Version 1.0.0"
+                    font_style: "H6"
+                    halign: "center"
+                    theme_text_color: "Secondary"
+                    size_hint_y: None
+                    height: "32dp"
+
+                MDSeparator:
+
+                MDLabel:
+                    text: "About This App"
+                    font_style: "H6"
+                    size_hint_y: None
+                    height: "32dp"
+
+                MDLabel:
+                    text: "\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0MP Detect is a mobile application for detecting and classifying microplastics using advanced YOLO-based computer vision technology. The app can identify six types of plastics: PET, PS, HDPE, LDPE, PVC, and PP with real-time detection capabilities."
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+                    halign: "justify"
+
+                MDSeparator:
+
+                MDLabel:
+                    text: "Features"
+                    font_style: "H6"
+                    size_hint_y: None
+                    height: "32dp"
+
+                MDLabel:
+                    text: "• Real-time camera detection\n• Upload and analyze images/videos\n• Adjustable detection parameters\n• Save and review results\n• High accuracy ONNX model"
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+                    line_height: 1.5
+
+                MDSeparator:
+
+                MDLabel:
+                    text: "Technology Stack"
+                    font_style: "H6"
+                    size_hint_y: None
+                    height: "32dp"
+
+                MDLabel:
+                    text: "• KivyMD Framework\n• ONNX Runtime\n• OpenCV Computer Vision\n• YOLO Object Detection\n• Python 3"
+                    size_hint_y: None
+                    height: self.texture_size[1]
+                    text_size: self.width, None
+                    line_height: 1.5
+
+                MDSeparator:
+
+                MDLabel:
+                    text: "© 2025 MP Detect | Dionefer B. Barte"
+                    halign: "center"
+                    theme_text_color: "Secondary"
+                    font_style: "Caption"
+                    size_hint_y: None
+                    height: "32dp"
