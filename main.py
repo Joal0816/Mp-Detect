@@ -147,6 +147,11 @@ except ImportError:
     def request_android_permissions():
         pass
 
+try:
+    from utils.file_dialog import open_file_dialog
+except ImportError:
+    open_file_dialog = None
+
 
 CLASSES = ["HDPE", "LDPE", "PET", "PP", "PS", "PVC"]
 HUD_BACKEND_BADGE = {
@@ -1325,27 +1330,22 @@ class MPDetectApp(MDApp):
             except (ValueError, OSError, FileNotFoundError) as e:
                 self.show_snackbar(f"Failed to add model: {e}")
 
-        # Try tkinter file dialog first, fall back to zenity
-        try:
-            import tkinter as _tk
-            from tkinter import filedialog as _filedialog
-            root = _tk.Tk()
-            root.withdraw()
-            root.attributes("-topmost", True)
-            path = _filedialog.askopenfilename(
+        default_dir = os.path.join(os.path.expanduser("~"), "MP Detect", "Models")
+        if not os.path.isdir(default_dir):
+            default_dir = os.path.expanduser("~")
+        if open_file_dialog is not None:
+            open_file_dialog(
                 title="Select Model File",
+                initial_dir=default_dir,
                 filetypes=[
                     ("ONNX Model", "*.onnx"),
                     ("TFLite Model", "*.tflite"),
                     ("All files", "*.*"),
                 ],
+                on_select=_on_file_selected,
+                on_cancel=lambda: None,
             )
-            root.destroy()
-            _on_file_selected(path)
-        except Exception:
-            default_dir = os.path.join(os.path.expanduser("~"), "MP Detect", "Models")
-            if not os.path.isdir(default_dir):
-                default_dir = os.path.expanduser("~")
+        else:
             self._open_file_zenity(default_dir)
 
     # ── Upload Gateway Screen ─────────────────────────────────────
@@ -1370,26 +1370,23 @@ class MPDetectApp(MDApp):
         default_dir = os.path.join(os.path.expanduser("~"), "MP Detect", "Unseen Data")
         if not os.path.isdir(default_dir):
             default_dir = os.path.expanduser("~")
-        try:
-            import tkinter as _tk
-            from tkinter import filedialog as _filedialog
-            root = _tk.Tk()
-            root.withdraw()
-            root.attributes("-topmost", True)
-            path = _filedialog.askopenfilename(
-                initialdir=default_dir,
+        if open_file_dialog is not None:
+            open_file_dialog(
                 title="Select Micrograph",
+                initial_dir=default_dir,
                 filetypes=[
                     ("Images", "*.png *.jpg *.jpeg *.tif *.tiff *.bmp"),
                     ("Videos", "*.mp4 *.avi *.mov *.mkv"),
                     ("All files", "*.*"),
                 ],
+                on_select=self._fm_select,
+                on_cancel=lambda: self.show_snackbar("No file selected"),
+                zenity_filters=[
+                    "Images|*.png *.jpg *.jpeg *.tif *.tiff",
+                    "Videos|*.mp4 *.avi *.mov *.mkv",
+                ],
             )
-            root.destroy()
-            if path:
-                self._fm_select(path)
-        except Exception as e:
-            print(f"[file_dialog] tkinter failed: {e}, trying zenity fallback")
+        else:
             self._open_file_zenity(default_dir)
 
     def _open_file_zenity(self, default_dir):
