@@ -34,7 +34,7 @@ from kivymd.app import MDApp
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.button import MDButton, MDButtonText
 from kivymd.uix.card import MDCard
-from kivymd.uix.label import MDLabel
+from kivymd.uix.label import MDIcon, MDLabel
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.screenmanager import MDScreenManager
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarText
@@ -164,6 +164,11 @@ HUD_BACKEND_BADGE = {
     "tflite": "[TFLite]",
 }
 _DEFAULTS = {"conf": 0.25, "iou": 0.45, "imgsz": 640}
+
+# Color palette (matches mpdetect.kv #:set definitions)
+COLOR_ACCENT_PRIMARY = (0, 0.8863, 1, 1)
+COLOR_TEXT_PRIMARY = (1, 1, 1, 1)
+COLOR_TEXT_SECONDARY = (0.6902, 0.6902, 0.6902, 1)
 
 # Phase 5: Size bucket boundaries (pixels²)
 SIZE_BUCKETS = [
