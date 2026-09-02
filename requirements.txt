@@ -1,6 +1,10 @@
-kivy==2.3.0
-kivymd==1.2.0
-opencv-python-headless
-onnxruntime
-numpy
-pillow
+kivy==2.3.1
+kivymd==2.0.0
+opencv-python-headless==4.10.0.84
+onnxruntime==1.19.2
+numpy==1.26.4
+pillow==10.4.0
+# Optional: for memory diagnostics in status ribbon
+# psutil==5.9.8
+# Optional: for desktop packaging
+# pyinstaller==6.11.1

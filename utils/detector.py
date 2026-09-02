@@ -3,8 +3,12 @@ import os
 import cv2
 import time
 import numpy as np
-import onnxruntime as ort
 from typing import List, Tuple
+
+try:
+    import onnxruntime as ort
+except ImportError:
+    ort = None
 
 # Drawing settings
 BOX_THICKNESS = 2
@@ -20,6 +24,48 @@ COLORS = [
     (0, 255, 0),  # Green   - PS
     (255, 0, 0),  # Blue    - PVC
 ]
+
+# Phase 7: Execution provider priority order
+_EXECUTION_PROVIDER_PRIORITY = [
+    "CUDAExecutionProvider",
+    "TensorrtExecutionProvider",
+    "DirectMLExecutionProvider",
+    "CPUExecutionProvider",
+]
+
+# Friendly display names for providers
+_PROVIDER_DISPLAY_NAMES = {
+    "CUDAExecutionProvider": "CUDA (GPU)",
+    "TensorrtExecutionProvider": "TensorRT (GPU)",
+    "DirectMLExecutionProvider": "DirectML (GPU)",
+    "CPUExecutionProvider": "CPU",
+}
+
+
+def detect_available_providers() -> List[str]:
+    """Detect which ONNX Runtime execution providers are available on this system."""
+    if ort is None:
+        return ["CPUExecutionProvider"]
+    available = ort.get_available_providers()
+    return [p for p in _EXECUTION_PROVIDER_PRIORITY if p in available]
+
+
+def select_best_provider() -> str:
+    """Auto-select the optimal execution provider with graceful fallback to CPU."""
+    available = detect_available_providers()
+    if not available:
+        return "CPUExecutionProvider"
+    # Pick highest priority available
+    for provider in _EXECUTION_PROVIDER_PRIORITY:
+        if provider in available:
+            print(f"[Detector] Selected execution provider: {provider}")
+            return provider
+    return "CPUExecutionProvider"
+
+
+def get_provider_display_name(provider: str) -> str:
+    """Return a human-friendly display name for an execution provider."""
+    return _PROVIDER_DISPLAY_NAMES.get(provider, provider)
 
 
 def cv2_letterbox(img, new_shape=640, color=(114, 114, 114)):
@@ -71,7 +117,26 @@ class YOLODetector:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Missing ONNX: {model_path}")
 
-        self.session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+        # Phase 7: Auto-detect and use the best available execution provider
+        if ort is None:
+            raise ImportError("onnxruntime is required for YOLODetector")
+        self.execution_provider = select_best_provider()
+        providers_to_use = [self.execution_provider]
+        # Always include CPU as fallback
+        if self.execution_provider != "CPUExecutionProvider":
+            providers_to_use.append("CPUExecutionProvider")
+
+        self.session = ort.InferenceSession(model_path, providers=providers_to_use)
+
+        # Verify which provider is actually active (ORT may fall back silently)
+        active_providers = self.session.get_providers()
+        if self.execution_provider in active_providers:
+            self.active_provider = self.execution_provider
+        else:
+            self.active_provider = active_providers[0] if active_providers else "CPUExecutionProvider"
+
+        self.provider_display = get_provider_display_name(self.active_provider)
+        print(f"[Detector] Active provider: {self.provider_display}")
 
         model_inputs = self.session.get_inputs()[0]
         self.input_name = model_inputs.name
@@ -219,7 +284,9 @@ class YOLODetector:
 
         return annotated
 
-    def detect(self, bgr_frame):
+    def detect(self, bgr_frame, conf_thresh=None, iou_thresh=None):
+        _conf = conf_thresh if conf_thresh is not None else self.conf_thresh
+        _iou = iou_thresh if iou_thresh is not None else self.iou_thresh
         original_frame = bgr_frame.copy()
 
         rgb = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
@@ -243,7 +310,7 @@ class YOLODetector:
         confs = cls_scores.max(axis=1)
         cls_ids = cls_scores.argmax(axis=1)
 
-        m = confs >= self.conf_thresh
+        m = confs >= _conf
         boxes_xywh = boxes_xywh[m]
         confs = confs[m]
         cls_ids = cls_ids[m]
@@ -266,7 +333,7 @@ class YOLODetector:
             boxes_xyxy[:, [0, 2]] = np.clip(boxes_xyxy[:, [0, 2]], 0, w - 1)
             boxes_xyxy[:, [1, 3]] = np.clip(boxes_xyxy[:, [1, 3]], 0, h - 1)
 
-            keep = nms(boxes_xyxy, confs, self.iou_thresh)
+            keep = nms(boxes_xyxy, confs, _iou)
             boxes_xyxy = boxes_xyxy[keep]
             confs = confs[keep]
             cls_ids = cls_ids[keep]
@@ -370,3 +437,10 @@ class YOLODetector:
             return final_summary, thumbnail_frame
         else:
             return self._empty_summary(), np.zeros((height, width, 3), dtype=np.uint8)
+
+
+Detector = YOLODetector
+
+# Provide explicit infer alias if only detect exists
+if not hasattr(YOLODetector, 'infer') and hasattr(YOLODetector, 'detect'):
+    YOLODetector.infer = YOLODetector.detect

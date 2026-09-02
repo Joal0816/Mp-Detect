@@ -1,0 +1,14 @@
+{
+  "conf": 0.25,
+  "iou": 0.45,
+  "imgsz": 640,
+  "lighting_mode": "blof",
+  "active_model_path": "models/best.onnx",
+  "active_model_id": "default_onnx",
+  "hardware_provider": "auto",
+  "scale_factor": 0.0,
+  "show_overlay": true,
+  "show_scale_bar": true,
+  "default_export_dir": "",
+  "magnification": "10x"
+}

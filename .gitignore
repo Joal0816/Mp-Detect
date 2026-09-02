@@ -1,2 +1,25 @@
 venv/
 __pycache__/
+build/
+dist/
+*.spec.bak
+*.bak
+*.backup
+*_backup.*
+*_clean.kv
+
+# User-specific config (ship config.example.json instead)
+config.json
+
+# Sample detection outputs
+MP Detect/*.jpg
+MP Detect/*.mp4
+MP Detect/Results/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
