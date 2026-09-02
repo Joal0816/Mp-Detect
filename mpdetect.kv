@@ -1241,6 +1241,17 @@
                 size_hint_x: 0.4
                 height: "44dp"
                 style: "filled"
+                md_bg_color: COLOR_ACCENT_SECONDARY
+                disabled: not app.ug_has_result
+                on_release: app.ug_view_in_inference()
+                MDButtonText:
+                    text: "View Results"
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 0.4
+                height: "44dp"
+                style: "filled"
                 md_bg_color: COLOR_ACCENT_WARN
                 opacity: 1 if app.ug_processing_active else 0
                 disabled: not app.ug_processing_active

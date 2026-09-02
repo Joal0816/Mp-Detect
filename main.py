@@ -1668,6 +1668,41 @@ class MPDetectApp(MDApp):
         self.ug_particle_count = 0
         self.show_snackbar(f"Detection failed: {msg}")
 
+    def ug_view_in_inference(self):
+        """Load upload detection results into the inference screen viewport."""
+        if not self.ug_has_result:
+            self.show_snackbar("No results to view")
+            return
+
+        try:
+            raw_frame = self._read_cached_frame()
+            annotated_frame = self._ug_cached_annotated_frame
+
+            scr = self._sm.get_screen("inference")
+
+            if raw_frame is not None:
+                raw_tex = self._cv2_to_texture(raw_frame)
+                if raw_tex and "raw_image" in scr.ids:
+                    scr.ids.raw_image.texture = raw_tex
+
+            if annotated_frame is not None:
+                ann_tex = self._cv2_to_texture(annotated_frame)
+                if ann_tex and "ann_image" in scr.ids:
+                    scr.ids.ann_image.texture = ann_tex
+
+            # Update results text on inference screen
+            total = self.ug_particle_count
+            if "status_text" in scr.ids:
+                scr.ids.status_text.text = f"Upload: {total} particles detected"
+            if "perf_stats" in scr.ids:
+                elapsed = self._ug_cached_elapsed_ms
+                scr.ids.perf_stats.text = f"Latency: {elapsed:.0f}ms  |  Backend: {self._engine_badge()}"
+
+            self._sm.transition.direction = "left"
+            self._sm.current = "inference"
+        except (RuntimeError, ValueError, cv2.error) as e:
+            self.show_snackbar(f"Failed to load results: {e}")
+
     def ug_reset(self):
         self._stop_event.clear()
         self._ug_file_path = None
