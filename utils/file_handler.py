@@ -5,6 +5,7 @@ import shutil
 import cv2
 from kivy.utils import platform
 
+
 class FileHandler:
     def __init__(self, results_dir=""):
         # Base DCIM path for Android
@@ -22,10 +23,20 @@ class FileHandler:
                 os.makedirs(self.dir, exist_ok=True)
             except OSError:
                 pass
+        # Phase 6: Ensure export subdirectories
+        self._ensure_results_dirs()
+
+    def _ensure_results_dirs(self):
+        for sub in ("Results", "Results/Images", "Results/Videos"):
+            d = os.path.join(self.dir, sub)
+            if not os.path.exists(d):
+                try:
+                    os.makedirs(d, exist_ok=True)
+                except OSError:
+                    pass
 
     def _ensure_folder(self, folder_name):
         # Ensure folders are always inside the MP Detect root
-        # If folder_name is "MP Detect", we just return root
         if folder_name.strip() == "MP Detect":
             return self.dir
 
@@ -62,6 +73,23 @@ class FileHandler:
     def get_video_path(self) -> str:
         ts = time.strftime("%Y%m%d_%H%M%S")
         return os.path.join(self.dir, f"VID_{ts}.mp4")
+
+    # ── Phase 6: Export Path Helpers ──────────────────────────────
+    def get_export_csv_path(self) -> str:
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        return os.path.join(self.dir, "Results", f"MP_Detect_Report_{ts}.csv")
+
+    def get_export_report_path(self) -> str:
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        return os.path.join(self.dir, "Results", f"MP_Detect_Summary_{ts}.json")
+
+    def get_annotated_image_path(self, suffix="annotated") -> str:
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        return os.path.join(self.dir, "Results", "Images", f"IMG_{suffix}_{ts}.jpg")
+
+    def get_annotated_video_path(self, suffix="annotated") -> str:
+        ts = time.strftime("%Y%m%d_%H%M%S")
+        return os.path.join(self.dir, "Results", "Videos", f"VID_{suffix}_{ts}.mp4")
 
     def list_folders(self):
         """List folders only inside the MP Detect directory"""

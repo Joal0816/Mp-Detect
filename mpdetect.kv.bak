@@ -1,0 +1,576 @@
+#:import dp kivy.metrics.dp
+
+<MDScreenManager>:
+    md_bg_color: 0.0706, 0.0706, 0.0706, 1
+
+# ── InferenceScreen ───────────────────────────────────────────────
+<InferenceScreen>:
+    MDFloatLayout:
+        md_bg_color: 0.0706, 0.0706, 0.0706, 1
+
+        MDBoxLayout:
+            orientation: "vertical"
+            size_hint: 1, 1
+
+            MDTopAppBar:
+                id: inf_toolbar
+                MDTopAppBarTitle:
+                    text: "Inference"
+
+            BoxLayout:
+                size_hint: 1, 0.55
+                md_bg_color: 0, 0, 0, 1
+
+                BoxLayout:
+                    id: raw_container
+                    size_hint: 0.5, 1
+                    Image:
+                        id: raw_image
+
+                BoxLayout:
+                    id: ann_container
+                    size_hint: 0.5, 1
+                    Image:
+                        id: ann_image
+
+            BoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: "48dp"
+                padding: "16dp", 0
+                spacing: "12dp"
+
+                MDLabel:
+                    text: "RAW"
+                    halign: "center"
+                    font_style: "Label"
+                    size_hint_x: 0.25
+                    theme_text_color: "Custom"
+                    text_color: 0, 0.898, 1, 1
+
+                MDSlider:
+                    id: split_slider
+                    min: 0
+                    max: 1
+                    value: 0.5
+                    on_value: root.update_split(self.value)
+                    color: 0, 0.898, 1, 1
+
+                MDLabel:
+                    text: "ANN"
+                    halign: "center"
+                    font_style: "Label"
+                    size_hint_x: 0.25
+                    theme_text_color: "Custom"
+                    text_color: 0.4627, 1, 0.0118, 1
+
+            ScrollView:
+                size_hint_y: 0.40
+                do_scroll_x: False
+
+                MDBoxLayout:
+                    orientation: "vertical"
+                    padding: "12dp"
+                    spacing: "6dp"
+                    size_hint_y: None
+                    height: self.minimum_height
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: "24dp"
+
+                        MDLabel:
+                            id: total_label
+                            text: "Total: 0"
+                            font_style: "Title"
+                            halign: "left"
+
+                        MDLabel:
+                            id: avg_label
+                            text: "Avg Conf: 0.00"
+                            font_style: "Title"
+                            halign: "right"
+                            theme_text_color: "Secondary"
+
+                    MDDivider:
+
+                    GridLayout:
+                        cols: 3
+                        size_hint_y: None
+                        height: "20dp"
+                        spacing: "0dp"
+                        MDLabel:
+                            text: "Type"
+                            bold: True
+                            size_hint_x: 0.4
+                            font_style: "Label"
+                        MDLabel:
+                            text: "Count"
+                            bold: True
+                            halign: "center"
+                            size_hint_x: 0.3
+                            font_style: "Label"
+                        MDLabel:
+                            text: "Avg Conf"
+                            bold: True
+                            halign: "center"
+                            size_hint_x: 0.3
+                            font_style: "Label"
+
+                    GridLayout:
+                        cols: 3
+                        size_hint_y: None
+                        height: "132dp"
+                        spacing: "0dp"
+                        MDLabel:
+                            text: "PET"
+                            font_style: "Body"
+                            size_hint_x: 0.4
+                        MDLabel:
+                            id: pet_count
+                            text: "0"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            id: pet_conf
+                            text: "0.00"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            text: "HDPE"
+                            font_style: "Body"
+                            size_hint_x: 0.4
+                        MDLabel:
+                            id: hdpe_count
+                            text: "0"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            id: hdpe_conf
+                            text: "0.00"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            text: "PVC"
+                            font_style: "Body"
+                            size_hint_x: 0.4
+                        MDLabel:
+                            id: pvc_count
+                            text: "0"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            id: pvc_conf
+                            text: "0.00"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            text: "LDPE"
+                            font_style: "Body"
+                            size_hint_x: 0.4
+                        MDLabel:
+                            id: ldpe_count
+                            text: "0"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            id: ldpe_conf
+                            text: "0.00"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            text: "PP"
+                            font_style: "Body"
+                            size_hint_x: 0.4
+                        MDLabel:
+                            id: pp_count
+                            text: "0"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            id: pp_conf
+                            text: "0.00"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            text: "PS"
+                            font_style: "Body"
+                            size_hint_x: 0.4
+                        MDLabel:
+                            id: ps_count
+                            text: "0"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+                        MDLabel:
+                            id: ps_conf
+                            text: "0.00"
+                            halign: "center"
+                            font_style: "Body"
+                            size_hint_x: 0.3
+
+        # ── Floating HUD ──────────────────────────────────────────
+        MDCard:
+            id: hud_panel
+            size_hint: None, None
+            size: "200dp", "90dp"
+            pos_hint: {"right": 0.98, "top": 0.94}
+            md_bg_color: 0, 0, 0, 0.75
+            padding: "10dp"
+            spacing: "4dp"
+            elevation: 4
+
+            MDBoxLayout:
+                orientation: "vertical"
+                spacing: "2dp"
+
+                MDLabel:
+                    id: hud_backend
+                    text: "[ONNX - CPU]"
+                    font_style: "Label"
+                    bold: True
+                    theme_text_color: "Custom"
+                    text_color: 0, 0.898, 1, 1
+                    size_hint_y: None
+                    height: "18dp"
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    spacing: "8dp"
+                    size_hint_y: None
+                    height: "18dp"
+
+                    MDLabel:
+                        id: hud_fps
+                        text: "FPS: 0"
+                        font_style: "Label"
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        size_hint_x: 0.5
+
+                    MDLabel:
+                        id: hud_latency
+                        text: "Latency: 0ms"
+                        font_style: "Label"
+                        theme_text_color: "Custom"
+                        text_color: 1, 1, 1, 1
+                        size_hint_x: 0.5
+
+        # ── Camera control bar ────────────────────────────────────
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: "56dp"
+            padding: "20dp"
+            spacing: "32dp"
+            pos_hint: {"center_x": 0.5, "y": 0}
+            md_bg_color: 0.1, 0.1, 0.1, 0.9
+
+            MDIconButton:
+                icon: "camera"
+                theme_text_color: "Custom"
+                text_color: 0, 0.898, 1, 1
+                pos_hint: {"center_y": 0.5}
+                on_release: app.inference_take_snapshot()
+
+            MDLabel:
+                id: inf_timer
+                text: ""
+                halign: "center"
+                theme_text_color: "Custom"
+                text_color: 0.4627, 1, 0.0118, 1
+                font_style: "Title"
+                size_hint_x: None
+                width: "60dp"
+
+            MDIconButton:
+                id: inf_record_btn
+                icon: "record-circle-outline"
+                theme_text_color: "Custom"
+                text_color: 1, 0.2, 0.2, 1
+                pos_hint: {"center_y": 0.5}
+                on_release: app.inference_toggle_recording()
+
+# ── ModelManagerScreen ────────────────────────────────────────────
+<ModelManagerScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        md_bg_color: 0.0706, 0.0706, 0.0706, 1
+
+        MDTopAppBar:
+            MDTopAppBarTitle:
+                text: "Model Manager"
+            MDTopAppBarTrailingButtonContainer:
+                MDIconButton:
+                    icon: "plus"
+                    on_release: app.mm_add_model_dialog()
+
+        ScrollView:
+            MDBoxLayout:
+                id: mm_model_list
+                orientation: "vertical"
+                padding: "12dp"
+                spacing: "10dp"
+                size_hint_y: None
+                height: self.minimum_height
+
+# ── UploadGatewayScreen ───────────────────────────────────────────
+<UploadGatewayScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        md_bg_color: 0.0706, 0.0706, 0.0706, 1
+
+        MDTopAppBar:
+            id: ug_toolbar
+            MDTopAppBarTitle:
+                text: "Upload & Detect"
+
+        MDRelativeLayout:
+            size_hint_y: 0.40
+            md_bg_color: 0, 0, 0, 1
+
+            Image:
+                id: ug_image
+                source: ""
+                size_hint: 1, 1
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                opacity: 1 if app.ug_has_image else 0
+
+            MDBoxLayout:
+                orientation: "vertical"
+                spacing: "12dp"
+                size_hint: None, None
+                size: "250dp", "120dp"
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                opacity: 0 if app.ug_has_image else 1
+                disabled: app.ug_has_image
+
+                MDIcon:
+                    icon: "image-search-outline"
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 0.5
+                    font_size: "64sp"
+                    halign: "center"
+                    pos_hint: {"center_x": 0.5}
+
+                MDLabel:
+                    text: "No Image/Video Selected"
+                    theme_text_color: "Custom"
+                    text_color: 1, 1, 1, 0.5
+                    halign: "center"
+                    font_style: "Title"
+
+            MDLabel:
+                text: "Processing..."
+                halign: "center"
+                theme_text_color: "Custom"
+                text_color: 0, 0.898, 1, 1
+                font_style: "Title"
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                opacity: 1 if app.ug_processing else 0
+
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: "60dp"
+            padding: "16dp"
+            spacing: "16dp"
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 1.0
+                height: "44dp"
+                style: "filled"
+                md_bg_color: 0, 0.898, 1, 1
+                on_release: app.ug_handle_action()
+                MDButtonText:
+                    text: "Select File" if not app.ug_has_image else ("Analyze" if not app.ug_has_result else "New File")
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 0.3
+                height: "44dp"
+                style: "filled"
+                md_bg_color: 0.4627, 1, 0.0118, 1
+                disabled: not app.ug_has_result
+                on_release: app.ug_share()
+                MDButtonText:
+                    text: "Share"
+
+        ScrollView:
+            size_hint_y: 0.55
+            do_scroll_x: False
+
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: "12dp"
+                spacing: "6dp"
+                size_hint_y: None
+                height: self.minimum_height
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: "24dp"
+
+                    MDLabel:
+                        id: ug_total_label
+                        text: "Total: 0"
+                        font_style: "Title"
+                        halign: "left"
+
+                    MDLabel:
+                        id: ug_avg_label
+                        text: "Avg Conf: 0.00"
+                        font_style: "Title"
+                        halign: "right"
+                        theme_text_color: "Secondary"
+
+                MDDivider:
+
+                GridLayout:
+                    cols: 3
+                    size_hint_y: None
+                    height: "20dp"
+                    spacing: "0dp"
+                    MDLabel:
+                        text: "Type"
+                        bold: True
+                        size_hint_x: 0.4
+                        font_style: "Label"
+                    MDLabel:
+                        text: "Count"
+                        bold: True
+                        halign: "center"
+                        size_hint_x: 0.3
+                        font_style: "Label"
+                    MDLabel:
+                        text: "Avg Conf"
+                        bold: True
+                        halign: "center"
+                        size_hint_x: 0.3
+                        font_style: "Label"
+
+                GridLayout:
+                    cols: 3
+                    size_hint_y: None
+                    height: "132dp"
+                    spacing: "0dp"
+                    MDLabel:
+                        text: "PET"
+                        font_style: "Body"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: ug_pet_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: ug_pet_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        text: "HDPE"
+                        font_style: "Body"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: ug_hdpe_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: ug_hdpe_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        text: "PVC"
+                        font_style: "Body"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: ug_pvc_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: ug_pvc_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        text: "LDPE"
+                        font_style: "Body"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: ug_ldpe_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: ug_ldpe_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        text: "PP"
+                        font_style: "Body"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: ug_pp_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: ug_pp_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        text: "PS"
+                        font_style: "Body"
+                        size_hint_x: 0.4
+                    MDLabel:
+                        id: ug_ps_count
+                        text: "0"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+                    MDLabel:
+                        id: ug_ps_conf
+                        text: "0.00"
+                        halign: "center"
+                        font_style: "Body"
+                        size_hint_x: 0.3
+
+                MDDivider:
+
+                MDLabel:
+                    id: ug_perf_stats
+                    text: ""
+                    halign: "center"
+                    theme_text_color: "Secondary"
+                    font_style: "Label"
+                    size_hint_y: None
+                    height: "32dp"

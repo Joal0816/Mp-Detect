@@ -1,0 +1,59 @@
+{
+  "app": "MP Detect",
+  "version": "Phase 6",
+  "generated_at": "2026-08-31T15:07:18.047713",
+  "source_file": "",
+  "model_backend": "[ONNX] CPU",
+  "parameters": {
+    "conf_threshold": 0.25,
+    "iou_threshold": 0.45,
+    "scale_factor_px_per_um": 5.0,
+    "illumination_mode": "blof"
+  },
+  "summary": {
+    "total_particles": 0,
+    "mean_area_px": 0.0,
+    "min_area_px": 0.0,
+    "max_area_px": 0.0,
+    "mean_area_um2": null,
+    "mean_aspect_ratio": 0.0
+  },
+  "size_distribution": {
+    "< 2500 px": 0,
+    "2500-10k px": 0,
+    "10k-40k px": 0,
+    "> 40k px": 0
+  },
+  "morphology_distribution": {
+    "Fragment": 0,
+    "Film": 0,
+    "Pellet": 0,
+    "Fiber": 0
+  },
+  "class_breakdown": {
+    "HDPE": {
+      "count": 0,
+      "mean_confidence": 0.0
+    },
+    "LDPE": {
+      "count": 0,
+      "mean_confidence": 0.0
+    },
+    "PET": {
+      "count": 0,
+      "mean_confidence": 0.0
+    },
+    "PP": {
+      "count": 0,
+      "mean_confidence": 0.0
+    },
+    "PS": {
+      "count": 0,
+      "mean_confidence": 0.0
+    },
+    "PVC": {
+      "count": 0,
+      "mean_confidence": 0.0
+    }
+  }
+}
