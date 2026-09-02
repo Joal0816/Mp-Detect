@@ -362,7 +362,14 @@ class MPDetectApp(MDApp):
         sm.add_widget(InferenceScreen(name="inference"))
         sm.add_widget(ModelManagerScreen(name="models"))
         sm.add_widget(UploadGatewayScreen(name="upload"))
-        return sm
+
+        from kivy.uix.boxlayout import BoxLayout
+        from kivy.factory import Factory
+        root = BoxLayout(orientation="vertical")
+        self._sm = sm
+        root.add_widget(sm)
+        root.add_widget(Factory.BottomNavBar())
+        return root
 
     def on_start(self):
         request_android_permissions()
@@ -429,7 +436,7 @@ class MPDetectApp(MDApp):
 
     def _update_source_buttons(self, active_source):
         try:
-            scr = self.root.get_screen("inference")
+            scr = self._sm.get_screen("inference")
             btn_file = scr.ids.get("btn_source_file")
             btn_cam = scr.ids.get("btn_source_camera")
             if active_source == "file":
@@ -544,7 +551,7 @@ class MPDetectApp(MDApp):
         return False
 
     def _kb_toggle_detection(self):
-        current = self.root.current if self.root else ""
+        current = self._sm.current if self.root else ""
         if current == "inference":
             self.toggle_inference()
         elif current == "upload":
@@ -568,10 +575,10 @@ class MPDetectApp(MDApp):
             self.show_snackbar("No results to export")
 
     def _kb_cycle_viewport(self):
-        current = self.root.current if self.root else ""
+        current = self._sm.current if self.root else ""
         if current == "inference":
             try:
-                scr = self.root.get_screen("inference")
+                scr = self._sm.get_screen("inference")
                 raw_img = scr.ids.get("raw_image")
                 ann_img = scr.ids.get("ann_image")
                 if raw_img and ann_img:
@@ -593,7 +600,7 @@ class MPDetectApp(MDApp):
         save_settings(self.cfg)
         # Update UI slider if visible
         try:
-            scr = self.root.get_screen("inference")
+            scr = self._sm.get_screen("inference")
             slider = scr.ids.get("threshold_slider")
             if slider and hasattr(slider, 'slider'):
                 slider.slider.value = self.cfg["conf"]
@@ -608,7 +615,7 @@ class MPDetectApp(MDApp):
     def _kb_reset_viewport(self):
         """Reset viewport pan & zoom to 1:1."""
         try:
-            scr = self.root.get_screen("inference")
+            scr = self._sm.get_screen("inference")
             scatter = None
             for child in scr.walk():
                 if child.__class__.__name__ == 'Scatter':
@@ -675,8 +682,8 @@ class MPDetectApp(MDApp):
         self.show_snackbar(f"Lighting: {preset}")
 
     def go(self, screen_name, direction="left"):
-        self.root.transition.direction = direction
-        self.root.current = screen_name
+        self._sm.transition.direction = direction
+        self._sm.current = screen_name
 
     def show_snackbar(self, message: str, delay: float = 0.0):
         def _do(_):
@@ -703,7 +710,7 @@ class MPDetectApp(MDApp):
         """Hide the 'No Micrograph Loaded' placeholder when media is active."""
         self.active_media_type = "loaded"
         try:
-            scr = self.root.get_screen("inference")
+            scr = self._sm.get_screen("inference")
             ph = scr.ids.get("viewport_placeholder")
             if ph:
                 ph.opacity = 0
@@ -929,7 +936,7 @@ class MPDetectApp(MDApp):
         else:
             try:
                 tex = self._cv2_to_texture(frame)
-                scr = self.root.get_screen("inference")
+                scr = self._sm.get_screen("inference")
                 if "raw_image" in scr.ids:
                     scr.ids.raw_image.texture = tex
                 if "ann_image" in scr.ids:
@@ -977,7 +984,7 @@ class MPDetectApp(MDApp):
             return
 
         raw_tex = self._cv2_to_texture(self._inf_last_frame)
-        scr = self.root.get_screen("inference")
+        scr = self._sm.get_screen("inference")
 
         if "raw_image" in scr.ids and raw_tex:
             scr.ids.raw_image.texture = raw_tex
@@ -1035,7 +1042,7 @@ class MPDetectApp(MDApp):
         return frame
 
     def _inf_reset_table(self):
-        scr = self.root.get_screen("inference")
+        scr = self._sm.get_screen("inference")
         if "total_value" in scr.ids:
             scr.ids.total_value.text = "0"
         if "avg_value" in scr.ids:
@@ -1049,7 +1056,7 @@ class MPDetectApp(MDApp):
                 scr.ids[f"{k}_conf"].text = "0.00"
 
     def update_split(self, value):
-        scr = self.root.get_screen("inference")
+        scr = self._sm.get_screen("inference")
         raw_w = max(0.05, float(value))
         # New layout uses single canvas; split controls sidebar width instead
         if "left_sidebar" in scr.ids:
@@ -1098,7 +1105,7 @@ class MPDetectApp(MDApp):
     def _populate_model_manager(self, dt):
         if self.mm is None:
             return
-        scr = self.root.get_screen("models")
+        scr = self._sm.get_screen("models")
         if "mm_model_list" not in scr.ids:
             return
 
@@ -1190,17 +1197,14 @@ class MPDetectApp(MDApp):
         self.show_snackbar(msg)
 
     def mm_add_model_dialog(self):
-        from kivy.clock import Clock
-        from functools import partial
-
         def _on_file_selected(path):
             if not path:
                 return
             try:
-                self.mm.add_model(path)
+                entry = self.mm.add_model_from_file(path)
                 self._populate_model_manager(0)
-                self.show_snackbar(f"Added: {os.path.basename(path)}")
-            except (ValueError, OSError) as e:
+                self.show_snackbar(f"Added: {entry.get('name', os.path.basename(path))}")
+            except (ValueError, OSError, FileNotFoundError) as e:
                 self.show_snackbar(f"Failed to add model: {e}")
 
         # Try tkinter file dialog first, fall back to zenity
@@ -1332,7 +1336,7 @@ class MPDetectApp(MDApp):
         if frame is not None and frame.size > 0 and frame.shape[0] > 0 and frame.shape[1] > 0:
             try:
                 tex = self._cv2_to_texture(frame)
-                scr = self.root.get_screen("upload")
+                scr = self._sm.get_screen("upload")
                 if "ug_image" in scr.ids and tex:
                     scr.ids.ug_image.texture = tex
             except (RuntimeError, ValueError, cv2.error, OSError) as e:
@@ -1541,11 +1545,11 @@ class MPDetectApp(MDApp):
         frame = self._read_cached_frame()
         if frame is not None:
             annotated = self._draw_boxes(frame, filtered)
-            scr = self.root.get_screen("upload")
+            scr = self._sm.get_screen("upload")
             if "ug_image" in scr.ids:
                 scr.ids.ug_image.texture = self._cv2_to_texture(annotated)
         # Update stats UI
-        scr = self.root.get_screen("upload")
+        scr = self._sm.get_screen("upload")
         if "ug_total_label" in scr.ids:
             scr.ids.ug_total_label.text = f"Total: {total}"
         if "ug_avg_label" in scr.ids:
@@ -1589,7 +1593,7 @@ class MPDetectApp(MDApp):
         return None
 
     def _ug_push_result(self, annotated, stats, total, avg_conf, elapsed_ms, raw_results=None):
-        scr = self.root.get_screen("upload")
+        scr = self._sm.get_screen("upload")
         if annotated is not None and "ug_image" in scr.ids:
             scr.ids.ug_image.texture = self._cv2_to_texture(annotated)
 
@@ -1665,7 +1669,7 @@ class MPDetectApp(MDApp):
         self.ug_max_area = 0.0
         self.ug_mean_ar = 0.0
         self.ug_size_um_text = ""
-        scr = self.root.get_screen("upload")
+        scr = self._sm.get_screen("upload")
         if "ug_image" in scr.ids:
             scr.ids.ug_image.texture = None
         if "ug_total_label" in scr.ids:

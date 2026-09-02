@@ -314,7 +314,7 @@
                 id: inf_toolbar
                 title: "Inference"
                 left_action_items: [["arrow-left", lambda *_: app.go("models", "right")]]
-                right_action_items: [["camera", lambda *_: app.go("camera", "left")]]
+                right_action_items: [["upload", lambda *_: app.go("upload", "left")]]
 
             # Image area with zoom/pan (Scatter)
             ScrollView:
@@ -1046,6 +1046,7 @@
         md_bg_color: COLOR_BG_PRIMARY
 
         MDTopAppBar:
+            left_action_items: [["arrow-left", lambda *_: app.go("inference", "right")]]
             MDTopAppBarTitle:
                 text: "Model Manager"
             MDTopAppBarTrailingButtonContainer:
@@ -1121,6 +1122,7 @@
 
         MDTopAppBar:
             id: ug_toolbar
+            left_action_items: [["arrow-left", lambda *_: app.go("inference", "right")]]
             MDTopAppBarTitle:
                 text: "Upload & Detect"
 
@@ -1525,3 +1527,42 @@
                 font_name: "RobotoMono"
                 text_color: COLOR_ACCENT_SECONDARY if app.status_ready else COLOR_ACCENT_WARN
                 size_hint_x: 0.2
+
+# ── Bottom Navigation Bar ─────────────────────────────────────────
+<BottomNavBar@MDBoxLayout>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(56)
+    md_bg_color: COLOR_BG_PANEL
+    padding: dp(4)
+    spacing: dp(4)
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "inference" else "filled"
+        size_hint_x: 1
+        on_release: app.go("inference", "left") if app._sm and app._sm.current != "inference" else None
+        MDButtonIcon:
+            icon: "camera"
+        MDButtonText:
+            text: "Detect"
+            font_size: "11sp"
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "upload" else "filled"
+        size_hint_x: 1
+        on_release: app.go("upload", "left") if app._sm and app._sm.current != "upload" else None
+        MDButtonIcon:
+            icon: "upload"
+        MDButtonText:
+            text: "Upload"
+            font_size: "11sp"
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "models" else "filled"
+        size_hint_x: 1
+        on_release: app.go("models", "left") if app._sm and app._sm.current != "models" else None
+        MDButtonIcon:
+            icon: "cog"
+        MDButtonText:
+            text: "Models"
+            font_size: "11sp"

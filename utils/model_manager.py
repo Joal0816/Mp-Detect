@@ -246,3 +246,44 @@ class ModelManager:
             self._registry["active_model_id"] = model_id
         self._save()
         return entry
+
+    def add_model_from_file(self, file_path: str, set_active: bool = False) -> dict:
+        """Add a model from a file path. Auto-detects format, validates, copies to models/ dir."""
+        if not os.path.isfile(file_path):
+            raise FileNotFoundError(f"Model file not found: {file_path}")
+
+        ext = os.path.splitext(file_path)[1].lower()
+        format_map = {".onnx": "onnx", ".tflite": "tflite"}
+        if ext not in format_map:
+            raise ValueError(f"Unsupported model format: {ext}. Use .onnx or .tflite")
+
+        format_ = format_map[ext]
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        model_id = f"{base_name}_{format_}"
+
+        # Validate before adding
+        validation = self.validate_model_file(file_path)
+        if not validation.get("valid", False):
+            errors = "; ".join(validation.get("errors", ["Unknown error"]))
+            raise ValueError(f"Model validation failed: {errors}")
+
+        # Copy model file to models/ directory
+        models_dir = os.path.join(os.path.dirname(__file__), "..", "models")
+        os.makedirs(models_dir, exist_ok=True)
+        dest_path = os.path.join(models_dir, os.path.basename(file_path))
+
+        if os.path.abspath(file_path) != os.path.abspath(dest_path):
+            import shutil
+            shutil.copy2(file_path, dest_path)
+
+        relative_path = os.path.relpath(dest_path, os.path.join(os.path.dirname(__file__), ".."))
+
+        return self.add_model(
+            model_id=model_id,
+            name=base_name,
+            format_=format_,
+            path=relative_path,
+            input_shape=validation.get("input_shape"),
+            labels=["HDPE", "LDPE", "PET", "PP", "PS", "PVC"],
+            set_active=set_active,
+        )
