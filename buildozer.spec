@@ -6,11 +6,11 @@ package.name = mpdetect
 package.domain = org.mpdetect
 source.dir = .
 source.include_exts = py,kv,json,spec,txt
-source.include_patterns = assets/*,models/*.onnx,utils/*.py
-source.exclude_dirs = tests,venv,.venv,__pycache__,.git,build,dist
+source.include_patterns = assets/*,models/*.onnx,models/*.tflite,models/model_registry.json,utils/*.py
+source.exclude_dirs = tests,venv,.venv,__pycache__,.git,build,dist,.github
 
 # ── Versioning ────────────────────────────────────────────────────
-version = 8.0.0
+version = 8.1.0
 
 # ── Requirements ──────────────────────────────────────────────────
 requirements = python3,kivy,kivymd,opencv-python-headless,onnxruntime,numpy,pillow
@@ -43,15 +43,19 @@ android.ant = None
 p4a.branch = develop
 
 # ── Presplash / Icon ──────────────────────────────────────────────
+# Uncomment and set paths when assets are ready:
 #presplash.filename = %(source.dir)s/assets/presplash.png
-#icon.filename = %(source.dir)s/assets/icon.png
 #icon.filename = %(source.dir)s/assets/icon_512.png
 
 # ── Window Settings ──────────────────────────────────────────────
 window = 0
 
 # ── Log Level ────────────────────────────────────────────────────
+# 0 = none, 1 = info, 2 = debug, 3 = verbose
 log_level = 2
+
+# ── Service (optional, for background processing) ─────────────────
+#android.add_services = service.py:ServiceMPDetect
 
 # ── iOS (not used, but kept for reference) ───────────────────────
 ios.kivy_ios_url = https://github.com/kivy/kivy-ios
