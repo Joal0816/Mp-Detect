@@ -1,45 +1,75 @@
 # tests/test_file_dialog.py
 """Tests for utils/file_dialog.py — shared file dialog."""
-import os
 from unittest.mock import MagicMock, patch
 
 from utils.file_dialog import open_file_dialog
 
 
 class TestOpenFileDialog:
+    """All tests block tkinter to prevent real OS dialogs.
+
+    Class-level setup mocks tkinter.Tk and askopenfilename (returning "")
+    so tkinter always "fails" and code falls through to zenity/mock.
+    Tkinter-specific tests temporarily override these mocks.
+    """
+
+    def setup_method(self):
+        self._tk_patcher = patch("tkinter.Tk", side_effect=ImportError("no display"))
+        self._filedialog_patcher = patch("tkinter.filedialog.askopenfilename")
+        self._tk_patcher.start()
+        self._filedialog_patcher.start()
+
+    def teardown_method(self):
+        self._filedialog_patcher.stop()
+        self._tk_patcher.stop()
+
+    # ── Tkinter-specific tests ────────────────────────────────────
+
     @patch("utils.file_dialog._open_file_zenity")
     @patch("utils.file_dialog.os.path.isfile", return_value=True)
     def test_tkinter_success_calls_on_select(self, mock_isfile, mock_zenity):
-        mock_root = MagicMock()
         mock_path = "/tmp/test_image.png"
+        mock_root = MagicMock()
 
-        with patch("utils.file_dialog.os.path.isdir", return_value=True):
+        self._filedialog_patcher.stop()
+        self._tk_patcher.stop()
+        try:
             with patch("tkinter.Tk", return_value=mock_root):
                 with patch("tkinter.filedialog.askopenfilename", return_value=mock_path):
-                    on_select = MagicMock()
-                    open_file_dialog(
-                        title="Test",
-                        initial_dir="/tmp",
-                        filetypes=[("Images", "*.png")],
-                        on_select=on_select,
-                    )
-                    on_select.assert_called_once_with(mock_path)
+                    with patch("utils.file_dialog.os.path.isdir", return_value=True):
+                        on_select = MagicMock()
+                        open_file_dialog(
+                            title="Test",
+                            initial_dir="/tmp",
+                            filetypes=[("Images", "*.png")],
+                            on_select=on_select,
+                        )
+                        on_select.assert_called_once_with(mock_path)
+        finally:
+            self._tk_patcher.start()
+            self._filedialog_patcher.start()
 
     @patch("utils.file_dialog._open_file_zenity")
     @patch("utils.file_dialog.os.path.isfile", return_value=False)
     def test_tkinter_cancel_calls_on_cancel(self, mock_isfile, mock_zenity):
         mock_root = MagicMock()
 
-        with patch("utils.file_dialog.os.path.isdir", return_value=True):
+        self._filedialog_patcher.stop()
+        self._tk_patcher.stop()
+        try:
             with patch("tkinter.Tk", return_value=mock_root):
                 with patch("tkinter.filedialog.askopenfilename", return_value=""):
-                    on_cancel = MagicMock()
-                    open_file_dialog(
-                        title="Test",
-                        initial_dir="/tmp",
-                        on_cancel=on_cancel,
-                    )
-                    on_cancel.assert_called_once()
+                    with patch("utils.file_dialog.os.path.isdir", return_value=True):
+                        on_cancel = MagicMock()
+                        open_file_dialog(
+                            title="Test",
+                            initial_dir="/tmp",
+                            on_cancel=on_cancel,
+                        )
+                        on_cancel.assert_called_once()
+        finally:
+            self._tk_patcher.start()
+            self._filedialog_patcher.start()
 
     @patch("utils.file_dialog._open_file_zenity")
     def test_tkinter_import_error_falls_back_to_zenity(self, mock_zenity):
@@ -55,6 +85,8 @@ class TestOpenFileDialog:
             with patch("utils.file_dialog.os.path.isdir", return_value=True):
                 open_file_dialog(title="Test", initial_dir="/tmp")
                 mock_zenity.assert_called_once()
+
+    # ── Zenity fallback tests (tkinter blocked by class setup) ────
 
     @patch("utils.file_dialog.subprocess.run")
     def test_zenity_success(self, mock_run):
@@ -94,6 +126,8 @@ class TestOpenFileDialog:
         )
         assert result is None
         on_cancel.assert_called_once()
+
+    # ── Default directory tests ───────────────────────────────────
 
     @patch("utils.file_dialog._open_file_zenity")
     def test_default_initial_dir(self, mock_zenity):
