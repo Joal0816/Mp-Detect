@@ -3,8 +3,12 @@ import os
 import cv2
 import time
 import numpy as np
-import onnxruntime as ort
 from typing import List, Tuple
+
+try:
+    import onnxruntime as ort
+except ImportError:
+    ort = None
 
 # Drawing settings
 BOX_THICKNESS = 2
@@ -40,6 +44,8 @@ _PROVIDER_DISPLAY_NAMES = {
 
 def detect_available_providers() -> List[str]:
     """Detect which ONNX Runtime execution providers are available on this system."""
+    if ort is None:
+        return ["CPUExecutionProvider"]
     available = ort.get_available_providers()
     return [p for p in _EXECUTION_PROVIDER_PRIORITY if p in available]
 
@@ -112,6 +118,8 @@ class YOLODetector:
             raise FileNotFoundError(f"Missing ONNX: {model_path}")
 
         # Phase 7: Auto-detect and use the best available execution provider
+        if ort is None:
+            raise ImportError("onnxruntime is required for YOLODetector")
         self.execution_provider = select_best_provider()
         providers_to_use = [self.execution_provider]
         # Always include CPU as fallback

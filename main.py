@@ -19,8 +19,6 @@ import json
 import subprocess
 import threading
 import time
-import tkinter as _tk
-from tkinter import filedialog as _filedialog
 from datetime import datetime
 from functools import partial
 
@@ -359,6 +357,8 @@ class MPDetectApp(MDApp):
         self._setup_upload_state()
 
         sm = MDScreenManager()
+        from kivy.lang import Builder
+        Builder.load_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "mpdetect.kv"))
         sm.add_widget(InferenceScreen(name="inference"))
         sm.add_widget(ModelManagerScreen(name="models"))
         sm.add_widget(UploadGatewayScreen(name="upload"))
@@ -375,9 +375,7 @@ class MPDetectApp(MDApp):
         Clock.schedule_once(self._auto_load_startup_image, 1.5)
 
     def _auto_load_startup_image(self, dt):
-        startup = os.path.join(os.path.dirname(os.path.abspath(__file__)), "MP Detect", "Unseen Data", "BLOF Arranged Frame.png")
-        if os.path.isfile(startup):
-            self._fm_select(startup)
+        pass
 
     def _phase7_init(self, dt):
         """Phase 7: Initialize model scanning, status ribbon, and config persistence."""
@@ -398,10 +396,10 @@ class MPDetectApp(MDApp):
         """Phase 8: Production hardening - clean up all resources on exit."""
         self.inference_cleanup()
         # Cancel any ongoing upload detection
-        if self.ug_processing_active:
+        if self.ug_processing_active and hasattr(self, '_stop_event'):
             self._stop_event.set()
         # Clean up temp video files
-        if self._ug_temp_video and os.path.isfile(self._ug_temp_video):
+        if getattr(self, '_ug_temp_video', None) and os.path.isfile(self._ug_temp_video):
             try:
                 os.remove(self._ug_temp_video)
             except OSError:
@@ -421,7 +419,7 @@ class MPDetectApp(MDApp):
         # Unbind keyboard
         try:
             Window.unbind(on_keyboard=self._on_keyboard)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, AttributeError):
             pass
 
     def on_source_change(self, instance, value):
@@ -947,6 +945,8 @@ class MPDetectApp(MDApp):
                 self._stop_inf_recording()
 
     def _inf_infer_thread(self, frame: np.ndarray, t0: float):
+        results = []
+        elapsed_ms = 0.0
         try:
             # Phase 8: Guard against invalid frame dimensions
             if frame is None or frame.size == 0 or frame.shape[0] < 10 or frame.shape[1] < 10:
@@ -959,8 +959,6 @@ class MPDetectApp(MDApp):
             elapsed_ms = (time.perf_counter() - t0) * 1000.0
         except (RuntimeError, ValueError, cv2.error, OSError, np.AxisError) as e:
             print(f"[infer_thread] {e}")
-            results = []
-            elapsed_ms = 0.0
 
         try:
             annotated_frame = self._draw_boxes(frame.copy(), results)
@@ -1192,7 +1190,41 @@ class MPDetectApp(MDApp):
         self.show_snackbar(msg)
 
     def mm_add_model_dialog(self):
-        self.show_snackbar("Add model dialog (TODO)")
+        from kivy.clock import Clock
+        from functools import partial
+
+        def _on_file_selected(path):
+            if not path:
+                return
+            try:
+                self.mm.add_model(path)
+                self._populate_model_manager(0)
+                self.show_snackbar(f"Added: {os.path.basename(path)}")
+            except (ValueError, OSError) as e:
+                self.show_snackbar(f"Failed to add model: {e}")
+
+        # Try tkinter file dialog first, fall back to zenity
+        try:
+            import tkinter as _tk
+            from tkinter import filedialog as _filedialog
+            root = _tk.Tk()
+            root.withdraw()
+            root.attributes("-topmost", True)
+            path = _filedialog.askopenfilename(
+                title="Select Model File",
+                filetypes=[
+                    ("ONNX Model", "*.onnx"),
+                    ("TFLite Model", "*.tflite"),
+                    ("All files", "*.*"),
+                ],
+            )
+            root.destroy()
+            _on_file_selected(path)
+        except Exception:
+            default_dir = os.path.join(os.path.expanduser("~"), "MP Detect", "Models")
+            if not os.path.isdir(default_dir):
+                default_dir = os.path.expanduser("~")
+            self._open_file_zenity(default_dir)
 
     # ── Upload Gateway Screen ─────────────────────────────────────
     def _setup_upload_state(self):
@@ -1217,6 +1249,8 @@ class MPDetectApp(MDApp):
         if not os.path.isdir(default_dir):
             default_dir = os.path.expanduser("~")
         try:
+            import tkinter as _tk
+            from tkinter import filedialog as _filedialog
             root = _tk.Tk()
             root.withdraw()
             root.attributes("-topmost", True)
