@@ -1124,10 +1124,15 @@ class MPDetectApp(MDApp):
             is_active = m.get("id") == self.mm.active_model_id
             accent = (0.0, 0.898, 1.0, 1.0) if is_active else (0.7, 0.7, 0.7, 1.0)
 
+            # Format badge
+            fmt = m.get("format", "").upper()
+            fmt_color = (0.0, 0.898, 1.0, 1.0) if fmt == "ONNX" else (0.4627, 1, 0.0118, 1.0)
+            fmt_badge = f" [{fmt}]" if fmt else ""
+
             badge_text = (
-                f"[ACTIVE] {m.get('name', 'Model')} ({m.get('format', '').upper()})"
+                f"[ACTIVE]{fmt_badge} {m.get('name', 'Model')}"
                 if is_active
-                else f"{m.get('name', 'Model')} ({m.get('format', '').upper()})"
+                else f"{fmt_badge} {m.get('name', 'Model')}"
             )
             badge = MDLabel(
                 text=badge_text,
@@ -1152,7 +1157,7 @@ class MPDetectApp(MDApp):
                 btn = MDButton(
                     MDButtonText(text="SWITCH"),
                     style="filled",
-                    size_hint_x=0.4,
+                    size_hint_x=0.3,
                     height=dp(32),
                     on_release=partial(self._on_switch_pressed, model_id),
                 )
@@ -1160,12 +1165,24 @@ class MPDetectApp(MDApp):
 
             val_btn = MDButton(
                 MDButtonText(text="VALIDATE"),
-                style="filled",
-                size_hint_x=0.4,
+                style="outlined",
+                size_hint_x=0.3,
                 height=dp(32),
                 on_release=partial(self._on_validate_pressed, model_path),
             )
             btn_row.add_widget(val_btn)
+
+            if not is_active:
+                rm_btn = MDButton(
+                    MDButtonText(text="REMOVE"),
+                    style="outlined",
+                    size_hint_x=0.3,
+                    height=dp(32),
+                    md_bg_color=(1, 0.2, 0.2, 1),
+                    on_release=partial(self._on_remove_model, model_id),
+                )
+                btn_row.add_widget(rm_btn)
+
             card.add_widget(btn_row)
             scr.ids.mm_model_list.add_widget(card)
 
@@ -1174,6 +1191,17 @@ class MPDetectApp(MDApp):
 
     def _on_validate_pressed(self, model_path, _instance):
         self._mm_validate(model_path)
+
+    def _on_remove_model(self, model_id, _instance):
+        if self.mm is None:
+            return
+        try:
+            self.mm.remove_model(model_id)
+            self._populate_model_manager(0)
+            self._update_status_ribbon()
+            self.show_snackbar(f"Removed model: {model_id}")
+        except (KeyError, ValueError) as e:
+            self.show_snackbar(f"Failed to remove: {e}")
 
     def _mm_switch(self, model_id):
         try:
