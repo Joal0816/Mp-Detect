@@ -199,6 +199,10 @@ class UploadGatewayScreen(MDScreen):
     pass
 
 
+class GalleryScreen(MDScreen):
+    pass
+
+
 class DistributionBarChart(Widget):
     """Phase 5: Lightweight horizontal bar chart rendered via Kivy Canvas + child labels."""
     values = ListProperty([0, 0, 0, 0])
@@ -362,6 +366,7 @@ class MPDetectApp(MDApp):
         sm.add_widget(InferenceScreen(name="inference"))
         sm.add_widget(ModelManagerScreen(name="models"))
         sm.add_widget(UploadGatewayScreen(name="upload"))
+        sm.add_widget(GalleryScreen(name="gallery"))
 
         from kivy.uix.boxlayout import BoxLayout
         from kivy.factory import Factory
@@ -374,6 +379,7 @@ class MPDetectApp(MDApp):
     def on_start(self):
         request_android_permissions()
         Clock.schedule_once(self._populate_model_manager, 0.5)
+        Clock.schedule_once(self._populate_gallery, 0.6)
         Clock.schedule_once(self._init_source_group, 0.7)
         # Phase 7: Scan models directory and update status ribbon
         Clock.schedule_once(self._phase7_init, 1.0)
@@ -455,6 +461,88 @@ class MPDetectApp(MDApp):
                     btn_file.md_bg_color = (0.102, 0.102, 0.102, 1)
         except (KeyError, AttributeError):
             pass
+
+    # ── Gallery Methods ─────────────────────────────────────────
+    def _populate_gallery(self, dt):
+        """Populate the gallery screen with files from MP Detect directory."""
+        if self.files is None:
+            return
+        scr = self._sm.get_screen("gallery")
+        if "gallery_list" not in scr.ids:
+            return
+
+        scr.ids.gallery_list.clear_widgets()
+        files = self.files.list_files()
+        supported_exts = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp",
+                          ".mp4", ".mov", ".avi", ".mkv")
+
+        for fpath in files:
+            if not fpath.lower().endswith(supported_exts):
+                continue
+            fname = os.path.basename(fpath)
+            ext = fname.rsplit(".", 1)[-1].upper() if "." in fname else "FILE"
+            is_video = ext.lower() in ("mp4", "mov", "avi", "mkv")
+            icon = "video" if is_video else "image"
+
+            card = MDCard(
+                orientation="horizontal",
+                size_hint_y=None,
+                height=dp(64),
+                padding=dp(12),
+                spacing=dp(12),
+                elevation=1,
+                style="filled",
+                md_bg_color=(0.15, 0.15, 0.15, 1),
+            )
+
+            icon_widget = MDIcon(
+                icon=icon,
+                theme_text_color="Custom",
+                text_color=COLOR_ACCENT_PRIMARY,
+                font_size="24sp",
+                size_hint_x=None,
+                width=dp(32),
+                halign="center",
+                valign="center",
+            )
+            card.add_widget(icon_widget)
+
+            text_box = MDBoxLayout(orientation="vertical", spacing=dp(2))
+            name_label = MDLabel(
+                text=fname[:30],
+                role="medium",
+                text_color=COLOR_TEXT_PRIMARY,
+            )
+            text_box.add_widget(name_label)
+            fmt_label = MDLabel(
+                text=ext,
+                role="small",
+                text_color=COLOR_TEXT_SECONDARY,
+            )
+            text_box.add_widget(fmt_label)
+            card.add_widget(text_box)
+
+            card.bind(on_release=partial(self._on_gallery_select, fpath))
+            scr.ids.gallery_list.add_widget(card)
+
+        if not scr.ids.gallery_list.children:
+            empty_label = MDLabel(
+                text="No images or videos found",
+                role="medium",
+                halign="center",
+                theme_text_color="Custom",
+                text_color=COLOR_TEXT_SECONDARY,
+            )
+            scr.ids.gallery_list.add_widget(empty_label)
+
+    def _on_gallery_select(self, file_path, _instance):
+        """Handle gallery file selection - route to upload screen."""
+        try:
+            self._fm_select(file_path)
+            self._sm.transition.direction = "left"
+            self._sm.current = "upload"
+        except Exception as e:
+            self.show_snackbar(f"Failed to load file: {e}")
 
     # ── Phase 7: Status Ribbon & Diagnostics ────────────────────
     def _update_status_ribbon(self):
@@ -684,6 +772,8 @@ class MPDetectApp(MDApp):
     def go(self, screen_name, direction="left"):
         self._sm.transition.direction = direction
         self._sm.current = screen_name
+        if screen_name == "gallery":
+            Clock.schedule_once(self._populate_gallery, 0.1)
 
     def show_snackbar(self, message: str, delay: float = 0.0):
         def _do(_):

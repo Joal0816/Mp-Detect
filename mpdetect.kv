@@ -1539,6 +1539,26 @@
                 text_color: COLOR_ACCENT_SECONDARY if app.status_ready else COLOR_ACCENT_WARN
                 size_hint_x: 0.2
 
+# ── Gallery Screen ────────────────────────────────────────────────
+<GalleryScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        md_bg_color: COLOR_BG_PRIMARY
+
+        MDTopAppBar:
+            left_action_items: [["arrow-left", lambda *_: app.go("inference", "right")]]
+            MDTopAppBarTitle:
+                text: "Gallery"
+
+        ScrollView:
+            MDBoxLayout:
+                id: gallery_list
+                orientation: "vertical"
+                spacing: dp(8)
+                padding: dp(12)
+                size_hint_y: None
+                height: self.minimum_height
+
 # ── Bottom Navigation Bar ─────────────────────────────────────────
 <BottomNavBar@MDBoxLayout>:
     orientation: "horizontal"
@@ -1566,6 +1586,16 @@
             icon: "upload"
         MDButtonText:
             text: "Upload"
+            font_size: "11sp"
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "gallery" else "filled"
+        size_hint_x: 1
+        on_release: app.go("gallery", "left") if app._sm and app._sm.current != "gallery" else None
+        MDButtonIcon:
+            icon: "image-multiple"
+        MDButtonText:
+            text: "Gallery"
             font_size: "11sp"
 
     MDButton:
