@@ -14,7 +14,7 @@ SRC_DIR = BASE_DIR
 # ── Data files to bundle ──────────────────────────────────────────
 datas = [
     (os.path.join(SRC_DIR, 'mpdetect.kv'), '.'),
-    (os.path.join(SRC_DIR, 'config.json'), '.'),
+    (os.path.join(SRC_DIR, 'config.example.json'), '.'),
     (os.path.join(SRC_DIR, 'models'), 'models'),
     (os.path.join(SRC_DIR, 'assets'), 'assets'),
 ]
@@ -31,11 +31,19 @@ hiddenimports = [
     'kivymd.uix.boxlayout',
     'kivymd.uix.filemanager',
     'kivymd.uix.snackbar',
+    'kivymd.uix.selectioncontrol',
+    'kivymd.uix.behaviors',
+    'kivymd.uix.behaviors.toggle_behavior',
     'kivymd.app',
     'kivy.core.window',
     'kivy.core.image',
     'kivy.graphics',
     'kivy.properties',
+    'kivy.clock',
+    'kivy.factory',
+    'kivy.uix.boxlayout',
+    'kivy.uix.scrollview',
+    'kivy.uix.image',
     'onnxruntime',
     'numpy',
     'cv2',
@@ -66,6 +74,9 @@ a = Analysis(
         'pandas',
         'pytest',
         'unittest',
+        'test',
+        'distutils',
+        'setuptools',
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -112,7 +123,7 @@ if sys.platform == 'darwin':
         bundle_identifier='org.mpdetect.app',
         info_plist={
             'CFBundleDisplayName': 'MP Detect',
-            'CFBundleShortVersionString': '8.0.0',
+            'CFBundleShortVersionString': '8.1.0',
             'NSHighResolutionCapable': True,
         },
     )

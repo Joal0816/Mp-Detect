@@ -314,7 +314,7 @@
                 id: inf_toolbar
                 title: "Inference"
                 left_action_items: [["arrow-left", lambda *_: app.go("models", "right")]]
-                right_action_items: [["camera", lambda *_: app.go("camera", "left")]]
+                right_action_items: [["upload", lambda *_: app.go("upload", "left")]]
 
             # Image area with zoom/pan (Scatter)
             ScrollView:
@@ -1046,6 +1046,7 @@
         md_bg_color: COLOR_BG_PRIMARY
 
         MDTopAppBar:
+            left_action_items: [["arrow-left", lambda *_: app.go("inference", "right")]]
             MDTopAppBarTitle:
                 text: "Model Manager"
             MDTopAppBarTrailingButtonContainer:
@@ -1121,6 +1122,7 @@
 
         MDTopAppBar:
             id: ug_toolbar
+            left_action_items: [["arrow-left", lambda *_: app.go("inference", "right")]]
             MDTopAppBarTitle:
                 text: "Upload & Detect"
 
@@ -1233,6 +1235,17 @@
                 on_release: app.ug_share()
                 MDButtonText:
                     text: "Share"
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 0.4
+                height: "44dp"
+                style: "filled"
+                md_bg_color: COLOR_ACCENT_SECONDARY
+                disabled: not app.ug_has_result
+                on_release: app.ug_view_in_inference()
+                MDButtonText:
+                    text: "View Results"
 
             MDButton:
                 pos_hint: {"center_y": 0.5}
@@ -1525,3 +1538,72 @@
                 font_name: "RobotoMono"
                 text_color: COLOR_ACCENT_SECONDARY if app.status_ready else COLOR_ACCENT_WARN
                 size_hint_x: 0.2
+
+# ── Gallery Screen ────────────────────────────────────────────────
+<GalleryScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        md_bg_color: COLOR_BG_PRIMARY
+
+        MDTopAppBar:
+            left_action_items: [["arrow-left", lambda *_: app.go("inference", "right")]]
+            MDTopAppBarTitle:
+                text: "Gallery"
+
+        ScrollView:
+            MDBoxLayout:
+                id: gallery_list
+                orientation: "vertical"
+                spacing: dp(8)
+                padding: dp(12)
+                size_hint_y: None
+                height: self.minimum_height
+
+# ── Bottom Navigation Bar ─────────────────────────────────────────
+<BottomNavBar@MDBoxLayout>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(56)
+    md_bg_color: COLOR_BG_PANEL
+    padding: dp(4)
+    spacing: dp(4)
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "inference" else "filled"
+        size_hint_x: 1
+        on_release: app.go("inference", "left") if app._sm and app._sm.current != "inference" else None
+        MDButtonIcon:
+            icon: "camera"
+        MDButtonText:
+            text: "Detect"
+            font_size: "11sp"
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "upload" else "filled"
+        size_hint_x: 1
+        on_release: app.go("upload", "left") if app._sm and app._sm.current != "upload" else None
+        MDButtonIcon:
+            icon: "upload"
+        MDButtonText:
+            text: "Upload"
+            font_size: "11sp"
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "gallery" else "filled"
+        size_hint_x: 1
+        on_release: app.go("gallery", "left") if app._sm and app._sm.current != "gallery" else None
+        MDButtonIcon:
+            icon: "image-multiple"
+        MDButtonText:
+            text: "Gallery"
+            font_size: "11sp"
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "models" else "filled"
+        size_hint_x: 1
+        on_release: app.go("models", "left") if app._sm and app._sm.current != "models" else None
+        MDButtonIcon:
+            icon: "cog"
+        MDButtonText:
+            text: "Models"
+            font_size: "11sp"
