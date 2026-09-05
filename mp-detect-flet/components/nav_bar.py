@@ -1,39 +1,28 @@
 # components/nav_bar.py - Bottom navigation bar
-"""Bottom navigation bar component for MP Detect Flet app."""
 import flet as ft
 
 
 class NavBar:
     def __init__(self, app):
         self.app = app
-        
-    def build(self) -> ft.Container:
-        return ft.Container(
-            content=ft.Row(
-                [
-                    ft.TextButton(
-                        text="Upload",
-                        icon=ft.icons.UPLOAD,
-                        on_click=lambda _: self.app.go("/upload"),
-                    ),
-                    ft.TextButton(
-                        text="Gallery",
-                        icon=ft.icons.PHOTO_LIBRARY,
-                        on_click=lambda _: self.app.go("/gallery"),
-                    ),
-                    ft.TextButton(
-                        text="Detect",
-                        icon=ft.icons.CAMERA_ALT,
-                        on_click=lambda _: self.app.go("/inference"),
-                    ),
-                    ft.TextButton(
-                        text="Models",
-                        icon=ft.icons.SETTINGS,
-                        on_click=lambda _: self.app.go("/models"),
-                    ),
-                ],
-                alignment=ft.MainAxisAlignment.SPACE_AROUND,
-            ),
-            bgcolor=ft.colors.SURFACE_VARIANT,
-            padding=10,
+        self.current_index = 0
+
+    def build(self) -> ft.NavigationBar:
+        return ft.NavigationBar(
+            selected_index=self.current_index,
+            on_change=self.on_nav_change,
+            destinations=[
+                ft.NavigationBarDestination(icon=ft.Icons.CAMERA_ALT, label="Detect"),
+                ft.NavigationBarDestination(icon=ft.Icons.UPLOAD, label="Upload"),
+                ft.NavigationBarDestination(icon=ft.Icons.PHOTO_LIBRARY, label="Gallery"),
+                ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="Models"),
+            ],
+            bgcolor=ft.Colors.SURFACE,
         )
+
+    def on_nav_change(self, e):
+        index = e.control.selected_index
+        self.current_index = index
+        routes = ["/inference", "/upload", "/gallery", "/models"]
+        if 0 <= index < len(routes):
+            self.app.go(routes[index])
