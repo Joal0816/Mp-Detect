@@ -71,6 +71,8 @@ class UploadScreen:
                     padding=20,
                     expand=True,
                 ),
+                # Bottom navigation bar
+                self.app.nav_bar.build(),
             ],
         )
         

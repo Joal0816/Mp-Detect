@@ -26,6 +26,7 @@ class MPDetectApp:
         self.nav_bar = None
         self.snackbar = None
         self.file_picker = None
+        self.current_screen = None
         
         # Current state
         self.current_file = None
@@ -68,9 +69,9 @@ class MPDetectApp:
             file_path = e.files[0].path
             if file_path:
                 self.current_file = file_path
-                # Notify current screen if it's upload screen
-                if self.page.views and hasattr(self.page.views[-1], '_on_file_selected'):
-                    self.page.views[-1]._on_file_selected(file_path)
+                # Notify current screen if it has the callback
+                if self.current_screen and hasattr(self.current_screen, '_on_file_selected'):
+                    self.current_screen._on_file_selected(file_path)
         
     def route_change(self, route):
         self.page.views.clear()
@@ -82,27 +83,32 @@ class MPDetectApp:
             
         # Upload screen
         if route.route == "/upload":
-            view = UploadScreen(self).build()
+            self.current_screen = UploadScreen(self)
+            view = self.current_screen.build()
             self.page.views.append(view)
             
         # Gallery screen
         elif route.route.startswith("/gallery"):
-            view = GalleryScreen(self).build()
+            self.current_screen = GalleryScreen(self)
+            view = self.current_screen.build()
             self.page.views.append(view)
             
         # Inference screen
         elif route.route.startswith("/inference"):
-            view = InferenceScreen(self).build()
+            self.current_screen = InferenceScreen(self)
+            view = self.current_screen.build()
             self.page.views.append(view)
             
         # Result screen
         elif route.route.startswith("/result"):
-            view = ResultScreen(self).build()
+            self.current_screen = ResultScreen(self)
+            view = self.current_screen.build()
             self.page.views.append(view)
             
         # Model manager screen
         elif route.route == "/models":
-            view = ModelManagerScreen(self).build()
+            self.current_screen = ModelManagerScreen(self)
+            view = self.current_screen.build()
             self.page.views.append(view)
             
         self.page.update()
