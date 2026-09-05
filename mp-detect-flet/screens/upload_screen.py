@@ -16,18 +16,17 @@ class UploadScreen:
         self.analyze_button = None
         self.has_image = False
 
-    def build(self) -> ft.View:
+    def build_content(self) -> ft.Column:
         self.analyze_button = ft.ElevatedButton(
             "Select File",
             icon=ft.Icons.FOLDER_OPEN,
             on_click=lambda _: self.handle_action(),
-            bgcolor=ft.Colors.PRIMARY,
+            bgcolor=ft.Colors.CYAN,
             color=ft.Colors.WHITE,
             expand=True,
         )
 
-        return ft.View(
-            "/upload",
+        return ft.Column(
             [
                 ft.AppBar(title=ft.Text("Upload & Detect"), bgcolor=ft.Colors.SURFACE),
                 ft.Container(
@@ -76,11 +75,13 @@ class UploadScreen:
                             ),
                         ],
                         spacing=0,
+                        expand=True,
                     ),
                     expand=True,
                 ),
-                self.app.nav_bar.build() if hasattr(self.app, 'nav_bar') else ft.Container(),
             ],
+            spacing=0,
+            expand=True,
         )
 
     def handle_action(self):
@@ -199,12 +200,12 @@ class UploadScreen:
                 from core.export import export_csv
                 path = self.app.file_handler.get_export_csv_path()
                 export_csv(self.app.current_results, path, self.app.settings)
-                self.app.show_snackbar(f"CSV saved")
+                self.app.show_snackbar("CSV saved")
             elif fmt == "json":
                 from core.export import export_json_report
                 path = self.app.file_handler.get_export_report_path()
                 export_json_report(self.app.current_results, path, self.app.settings, self.app.current_file, "Flet Backend")
-                self.app.show_snackbar(f"Report saved")
+                self.app.show_snackbar("Report saved")
             elif fmt == "image":
                 self.app.show_snackbar("Image export")
             elif fmt == "video":

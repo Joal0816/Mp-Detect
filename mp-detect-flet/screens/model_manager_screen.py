@@ -1,4 +1,4 @@
-# screens/model_manager_screen.py - Model management screen
+# screens/model_manager_screen.py
 import flet as ft
 import os
 import threading
@@ -7,32 +7,37 @@ import threading
 class ModelManagerScreen:
     def __init__(self, app):
         self.app = app
-        self.model_list = ft.ListView(spacing=10, padding=10)
+        self.model_list = ft.ListView(spacing=10, padding=10, expand=True)
 
-    def build(self) -> ft.View:
+    def build_content(self) -> ft.Column:
         self.load_models()
-        return ft.View(
-            "/models",
+        return ft.Column(
             [
                 ft.AppBar(
                     title=ft.Text("Models"),
-                    leading=ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=lambda _: self.app.go("/inference")),
-                    actions=[ft.IconButton(icon=ft.Icons.ADD, on_click=lambda _: self.show_add_dialog())],
+                    leading=ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=lambda: self.app.go("inference")),
+                    actions=[ft.IconButton(icon=ft.Icons.ADD, on_click=lambda: self.show_add_dialog())],
                     bgcolor=ft.Colors.SURFACE,
                 ),
                 ft.Container(
                     content=ft.Column(
                         [
-                            ft.Card(content=ft.Container(content=ft.Column([ft.Text("Active Model", size=14, weight=ft.FontWeight.BOLD), ft.Text(f"Model: {self.app.model_manager.active_model_id or 'None'}", size=12), ft.Text(f"Backend: {'ONNX' if self.app.current_engine and not hasattr(self.app.current_engine, 'interpreter') else 'TFLite' if self.app.current_engine else 'None'}", size=12)], spacing=5), padding=10)),
+                            ft.Card(content=ft.Container(content=ft.Column([
+                                ft.Text("Active Model", size=14, weight=ft.FontWeight.BOLD),
+                                ft.Text(f"Model: {self.app.model_manager.active_model_id or 'None'}", size=12),
+                                ft.Text(f"Backend: {'ONNX' if self.app.current_engine and not hasattr(self.app.current_engine, 'interpreter') else 'TFLite' if self.app.current_engine else 'None'}", size=12),
+                            ], spacing=5), padding=12)),
                             self.model_list,
                         ],
                         spacing=10,
+                        expand=True,
                     ),
                     padding=10,
                     expand=True,
                 ),
-                self.app.nav_bar.build() if hasattr(self.app, 'nav_bar') else ft.Container(),
             ],
+            spacing=0,
+            expand=True,
         )
 
     def load_models(self):
@@ -40,12 +45,15 @@ class ModelManagerScreen:
         models = self.app.model_manager.models
         active_id = self.app.model_manager.active_model_id
         if not models:
-            self.model_list.controls.append(ft.Container(content=ft.Column([ft.Icon(ft.Icons.MODEL_TRAINING, size=48, color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE)), ft.Text("No models found", size=16), ft.Text("Add using + button", size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE))], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10), alignment=ft.Alignment.CENTER, padding=20))
+            self.model_list.controls.append(ft.Container(content=ft.Column([
+                ft.Icon(ft.Icons.MODEL_TRAINING, size=48, color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE)),
+                ft.Text("No models found", size=16),
+                ft.Text("Add using + button", size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE)),
+            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10), alignment=ft.Alignment.CENTER, padding=20))
         else:
             for model in models:
                 mid = model.get("id", "")
                 self.model_list.controls.append(self.build_model_card(model, mid == active_id))
-        self.app.page.update()
 
     def build_model_card(self, model, is_active):
         mid = model.get("id", "")
@@ -54,7 +62,7 @@ class ModelManagerScreen:
         return ft.Card(
             content=ft.Container(
                 content=ft.Column([
-                    ft.Row([ft.Text(f"{'* ' if is_active else ''}{name}", size=14, weight=ft.FontWeight.BOLD if is_active else ft.FontWeight.NORMAL), ft.Text(f"[{fmt}]", size=12, color=ft.Colors.PRIMARY)], spacing=5),
+                    ft.Row([ft.Text(f"{'* ' if is_active else ''}{name}", size=14, weight=ft.FontWeight.BOLD if is_active else ft.FontWeight.NORMAL), ft.Text(f"[{fmt}]", size=12, color=ft.Colors.CYAN)], spacing=5),
                     ft.Text(f"ID: {mid}", size=10, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE)),
                     ft.Row([
                         ft.ElevatedButton("SELECT", on_click=lambda _, m=mid: self.select_model(m), visible=not is_active),
@@ -62,7 +70,7 @@ class ModelManagerScreen:
                         ft.IconButton(icon=ft.Icons.DELETE, on_click=lambda _, m=mid: self.delete_model(m), visible=not is_active),
                     ], spacing=5),
                 ], spacing=5),
-                padding=10,
+                padding=12,
             ),
         )
 
@@ -84,7 +92,7 @@ class ModelManagerScreen:
                 try:
                     self.app.model_manager.add_model_from_url(url=url_field.value, name=name_field.value, format_=format_dropdown.value, labels=[l.strip() for l in labels_field.value.split(",")], set_active=True)
                     self.load_models()
-                    self.app.page.overlay.remove(dialog)
+                    dialog.open = False
                     self.app.page.update()
                     self.app.show_snackbar(f"Model added: {name_field.value}")
                 except Exception as ex:

@@ -3,7 +3,7 @@ import flet as ft
 import cv2
 import base64
 import threading
-from components.layout import ResponsiveLayout, LeftSidebar, RightInspector
+from components.layout import LeftSidebar, RightInspector
 
 
 class InferenceScreen:
@@ -19,13 +19,10 @@ class InferenceScreen:
         self.left_sidebar = LeftSidebar(app)
         self.right_inspector = RightInspector(app)
         self._has_image = False
-        self._cap = None
-        self._inf_active = False
-        self._inf_thread_busy = False
 
-    def build(self) -> ft.View:
-        self.detect_button = ft.ElevatedButton("Detect", icon=ft.Icons.PLAY_ARROW, on_click=lambda _: self.toggle_detection(), bgcolor=ft.Colors.PRIMARY, color=ft.Colors.WHITE, width=120)
-        self.view_results_button = ft.ElevatedButton("View Results", icon=ft.Icons.VISIBILITY, on_click=lambda _: self.app.go("/result"), visible=False)
+    def build_content(self) -> ft.Row:
+        self.detect_button = ft.ElevatedButton("Detect", icon=ft.Icons.PLAY_ARROW, on_click=lambda _: self.toggle_detection(), bgcolor=ft.Colors.CYAN, color=ft.Colors.WHITE, width=120)
+        self.view_results_button = ft.ElevatedButton("View Results", icon=ft.Icons.VISIBILITY, on_click=lambda _: self.app.go("result"), visible=False)
 
         if self.app.current_file:
             self._load_image(self.app.current_file)
@@ -83,20 +80,14 @@ class InferenceScreen:
             expand=True,
         )
 
-        layout = ResponsiveLayout(self.app)
-        content = layout.build(
-            left_sidebar=self.left_sidebar.build(),
-            center_content=center_content,
-            right_inspector=self.right_inspector.build(),
-        )
-
-        return ft.View(
-            "/inference",
+        return ft.Row(
             [
-                ft.AppBar(title=ft.Text("Inference"), leading=ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=lambda _: self.app.go("/gallery")), bgcolor=ft.Colors.SURFACE),
-                ft.Container(content=content, expand=True),
-                self.app.nav_bar.build() if hasattr(self.app, 'nav_bar') else ft.Container(),
+                ft.Container(content=self.left_sidebar.build(), width=220, bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE)),
+                ft.Container(content=center_content, expand=True),
+                ft.Container(content=self.right_inspector.build(), width=280, bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE)),
             ],
+            spacing=0,
+            expand=True,
         )
 
     def _load_image(self, file_path):
@@ -119,22 +110,6 @@ class InferenceScreen:
                     self._has_image = True
         except Exception as e:
             print(f"[Inference] Error: {e}")
-
-    def pick_file(self):
-        file_picker = ft.FilePicker()
-        self.app.page.overlay.append(file_picker)
-        self.app.page.update()
-        result = file_picker.pick_files(
-            dialog_title="Select Micrograph",
-            file_type=ft.FilePickerFileType.CUSTOM,
-            allowed_extensions=["png", "jpg", "jpeg", "tif", "tiff", "bmp", "mp4", "avi", "mov", "mkv"],
-        )
-        self.app.page.overlay.remove(file_picker)
-        self.app.page.update()
-        if result and len(result) > 0:
-            self.app.current_file = result[0].path
-            self._load_image(result[0].path)
-            self.app.show_snackbar(f"Loaded: {result[0].path.split('/')[-1]}")
 
     def toggle_detection(self):
         if self.app.current_file is None:

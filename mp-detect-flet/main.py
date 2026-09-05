@@ -14,8 +14,9 @@ class MPDetectApp:
         self.model_manager = ModelManager()
         self.settings = load_settings()
         self.snackbar = None
-        self.current_screen = None
         self.nav_bar = None
+        self.content_area = None
+        self.current_screen_name = "upload"
 
         # Current state
         self.current_file = None
@@ -41,96 +42,74 @@ class MPDetectApp:
         self.snackbar = ft.SnackBar(content=ft.Text(""))
         page.overlay.append(self.snackbar)
 
-        # Import components
-        from components.nav_bar import NavBar
-        self.nav_bar = NavBar(self)
+        # Content area for screens
+        self.content_area = ft.Container(expand=True)
 
-        # Import screens
-        from screens.upload_screen import UploadScreen
-        from screens.gallery_screen import GalleryScreen
-        from screens.inference_screen import InferenceScreen
-        from screens.result_screen import ResultScreen
-        from screens.model_manager_screen import ModelManagerScreen
+        # Navigation bar
+        self.nav_bar = ft.NavigationBar(
+            selected_index=1,
+            on_change=self._on_nav_change,
+            destinations=[
+                ft.NavigationBarDestination(icon=ft.Icons.CAMERA_ALT, label="Detect"),
+                ft.NavigationBarDestination(icon=ft.Icons.UPLOAD, label="Upload"),
+                ft.NavigationBarDestination(icon=ft.Icons.PHOTO_LIBRARY, label="Gallery"),
+                ft.NavigationBarDestination(icon=ft.Icons.SETTINGS, label="Models"),
+            ],
+            bgcolor=ft.Colors.SURFACE,
+        )
 
-        self._screens = {
-            "upload": UploadScreen,
-            "gallery": GalleryScreen,
-            "inference": InferenceScreen,
-            "result": ResultScreen,
-            "models": ModelManagerScreen,
-        }
+        # Build initial layout
+        page.add(
+            ft.Column(
+                [
+                    self.content_area,
+                    self.nav_bar,
+                ],
+                spacing=0,
+                expand=True,
+            )
+        )
 
-        # Keyboard shortcuts
-        page.on_keyboard_event = self._on_keyboard
+        # Show upload screen
+        self._show_screen("upload")
 
-        # Set up routing
-        page.on_route_change = self.route_change
-        page.go("/upload")
+    def _on_nav_change(self, e):
+        index = e.control.selected_index
+        routes = ["inference", "upload", "gallery", "models"]
+        if 0 <= index < len(routes):
+            self._show_screen(routes[index])
 
-    def _on_keyboard(self, e):
-        """Handle keyboard shortcuts."""
-        key = e.key
-        ctrl = e.ctrl
-        shift = e.shift
+    def _show_screen(self, name):
+        self.current_screen_name = name
+        self.nav_bar.selected_index = ["inference", "upload", "gallery", "models"].index(name)
 
-        # Space - Toggle detection
-        if key == " " and not ctrl:
-            if self.current_screen and hasattr(self.current_screen, 'toggle_detection'):
-                self.current_screen.toggle_detection()
-            return
-
-        # Ctrl+O - Open file
-        if ctrl and key == "o":
-            if self.current_screen and hasattr(self.current_screen, 'pick_file'):
-                self.current_screen.pick_file()
-            return
-
-        # Ctrl+E - Quick export
-        if ctrl and key == "e":
-            if self.current_results:
-                try:
-                    from core.export import export_csv, export_annotated_image
-                    csv_path = self.file_handler.get_export_csv_path()
-                    export_csv(self.current_results, csv_path, self.settings)
-                    self.show_snackbar(f"CSV exported")
-                except Exception as e:
-                    self.show_snackbar(f"Export failed: {e}")
-            return
-
-        # [ - Decrease confidence
-        if key == "[":
-            new_val = max(0.01, self.settings.get("conf", 0.25) - 0.05)
-            self.settings["conf"] = round(new_val, 2)
-            save_settings(self.settings)
-            self.show_snackbar(f"Confidence: {self.settings['conf']:.2f}")
-            return
-
-        # ] - Increase confidence
-        if key == "]":
-            new_val = min(0.99, self.settings.get("conf", 0.25) + 0.05)
-            self.settings["conf"] = round(new_val, 2)
-            save_settings(self.settings)
-            self.show_snackbar(f"Confidence: {self.settings['conf']:.2f}")
-            return
-
-    def route_change(self, route):
-        self.page.views.clear()
-
-        if route.route == "/":
-            self.page.go("/upload")
-            return
-
-        screen_name = route.route.lstrip("/")
-        ScreenClass = self._screens.get(screen_name)
-        if ScreenClass:
-            self.current_screen = ScreenClass(self)
-            view = self.current_screen.build()
-            self.page.views.append(view)
+        # Import and build screen
+        if name == "upload":
+            from screens.upload_screen import UploadScreen
+            screen = UploadScreen(self)
+            self.content_area.content = screen.build_content()
+        elif name == "gallery":
+            from screens.gallery_screen import GalleryScreen
+            screen = GalleryScreen(self)
+            self.content_area.content = screen.build_content()
+        elif name == "inference":
+            from screens.inference_screen import InferenceScreen
+            screen = InferenceScreen(self)
+            self.content_area.content = screen.build_content()
+        elif name == "models":
+            from screens.model_manager_screen import ModelManagerScreen
+            screen = ModelManagerScreen(self)
+            self.content_area.content = screen.build_content()
+        elif name == "result":
+            from screens.result_screen import ResultScreen
+            screen = ResultScreen(self)
+            self.content_area.content = screen.build_content()
 
         self.page.update()
 
     def go(self, route):
-        self.page.go(route)
+        name = route.lstrip("/")
+        self._show_screen(name)
 
     def show_snackbar(self, message: str):
         self.snackbar.content = ft.Text(message)

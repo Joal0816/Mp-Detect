@@ -1,4 +1,4 @@
-# screens/gallery_screen.py - Grid view screen
+# screens/gallery_screen.py
 import flet as ft
 import os
 
@@ -9,55 +9,51 @@ class GalleryScreen:
         self.files = []
         self.filter = "all"
 
-    def build(self) -> ft.View:
-        self.grid_view = self.build_grid_view()
-        return ft.View(
-            "/gallery",
+    def build_content(self) -> ft.Column:
+        self.load_files()
+        return ft.Column(
             [
                 ft.AppBar(
                     title=ft.Text("Gallery"),
-                    leading=ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=lambda _: self.app.go("/upload")),
+                    leading=ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=lambda: self.app.go("upload")),
                     bgcolor=ft.Colors.SURFACE,
                 ),
-                ft.Container(
+                ft.Row(
+                    [
+                        ft.FilterChip(label=ft.Text("All"), selected=self.filter == "all", on_select=lambda _: self.set_filter("all")),
+                        ft.FilterChip(label=ft.Text("Images"), selected=self.filter == "images", on_select=lambda _: self.set_filter("images")),
+                        ft.FilterChip(label=ft.Text("Videos"), selected=self.filter == "videos", on_select=lambda _: self.set_filter("videos")),
+                    ],
+                    spacing=10,
+                    padding=ft.Padding.symmetric(horizontal=16),
+                ),
+                self.build_grid() if self.files else ft.Container(
                     content=ft.Column(
                         [
-                            ft.Row(
-                                [
-                                    ft.FilterChip(label=ft.Text("All"), selected=self.filter == "all", on_select=lambda _: self.set_filter("all")),
-                                    ft.FilterChip(label=ft.Text("Images"), selected=self.filter == "images", on_select=lambda _: self.set_filter("images")),
-                                    ft.FilterChip(label=ft.Text("Videos"), selected=self.filter == "videos", on_select=lambda _: self.set_filter("videos")),
-                                ],
-                                spacing=10,
-                            ),
-                            self.grid_view,
+                            ft.Icon(ft.Icons.PHOTO_LIBRARY, size=48, color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE)),
+                            ft.Text("No media found", size=16),
+                            ft.Text("Upload from the Upload tab", size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE)),
                         ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         spacing=10,
                     ),
-                    padding=10,
+                    alignment=ft.Alignment.CENTER,
                     expand=True,
                 ),
-                self.app.nav_bar.build() if hasattr(self.app, 'nav_bar') else ft.Container(),
             ],
+            spacing=0,
+            expand=True,
         )
 
-    def build_grid_view(self):
-        self.load_files()
-        if not self.files:
-            return ft.Container(
-                content=ft.Column(
-                    [
-                        ft.Icon(ft.Icons.PHOTO_LIBRARY, size=48, color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE)),
-                        ft.Text("No media found", size=16),
-                        ft.Text("Upload from the Upload tab", size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE)),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    spacing=10,
-                ),
-                alignment=ft.Alignment.CENTER,
-                expand=True,
-            )
-        return ft.GridView(runs_count=3, child_aspect_ratio=0.8, spacing=10, run_spacing=10, children=[self.build_grid_item(f) for f in self.files])
+    def build_grid(self):
+        return ft.GridView(
+            runs_count=3,
+            child_aspect_ratio=0.8,
+            spacing=10,
+            run_spacing=10,
+            padding=16,
+            children=[self.build_grid_item(f) for f in self.files],
+        )
 
     def build_grid_item(self, file_path):
         name = os.path.basename(file_path)
@@ -66,7 +62,7 @@ class GalleryScreen:
             content=ft.Container(
                 content=ft.Column(
                     [
-                        ft.Icon(icon, size=48, color=ft.Colors.PRIMARY),
+                        ft.Icon(icon, size=48, color=ft.Colors.CYAN),
                         ft.Text(name[:15] + "..." if len(name) > 15 else name, size=10, text_align=ft.TextAlign.CENTER),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -95,11 +91,9 @@ class GalleryScreen:
 
     def set_filter(self, filter_type):
         self.filter = filter_type
-        self.app.page.views.clear()
-        self.app.page.views.append(self.build())
-        self.app.page.update()
+        self.app._show_screen("gallery")
 
     def select_file(self, file_path):
         self.app.current_file = file_path
         self.app.show_snackbar(f"Selected: {os.path.basename(file_path)}")
-        self.app.go("/inference")
+        self.app.go("inference")

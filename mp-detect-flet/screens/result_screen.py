@@ -11,42 +11,38 @@ class ResultScreen:
         self.app = app
         self.video_display = ft.Image(src="", width=350, height=300, fit="contain")
 
-    def build(self) -> ft.View:
+    def build_content(self) -> ft.Column:
         self.load_results()
-        return ft.View(
-            "/result",
+        return ft.Column(
             [
-                ft.AppBar(title=ft.Text("Results"), leading=ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=lambda _: self.app.go("/inference")), bgcolor=ft.Colors.SURFACE),
+                ft.AppBar(title=ft.Text("Results"), leading=ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=lambda: self.app.go("inference")), bgcolor=ft.Colors.SURFACE),
+                ft.Container(
+                    content=self.video_display,
+                    border=ft.Border.all(1, ft.Colors.OUTLINE),
+                    border_radius=8,
+                    padding=16,
+                ),
                 ft.Container(
                     content=ft.Column(
                         [
-                            ft.Container(content=self.video_display, border=ft.Border.all(1, ft.Colors.OUTLINE), border_radius=8),
-                            ft.Container(
-                                content=ft.Column(
-                                    [
-                                        ft.Text("Export", size=14, weight=ft.FontWeight.BOLD),
-                                        ft.Row(
-                                            [
-                                                ft.ElevatedButton("CSV", icon=ft.Icons.TABLE_CHART, on_click=lambda _: self._export("csv")),
-                                                ft.ElevatedButton("JSON", icon=ft.Icons.CODE, on_click=lambda _: self._export("json")),
-                                                ft.ElevatedButton("Image", icon=ft.Icons.IMAGE, on_click=lambda _: self._export("image")),
-                                                ft.ElevatedButton("Video", icon=ft.Icons.VIDEO_FILE, on_click=lambda _: self._export("video")),
-                                            ],
-                                            spacing=8,
-                                        ),
-                                    ],
-                                    spacing=8,
-                                ),
-                                padding=12,
+                            ft.Text("Export", size=14, weight=ft.FontWeight.BOLD),
+                            ft.Row(
+                                [
+                                    ft.ElevatedButton("CSV", icon=ft.Icons.TABLE_CHART, on_click=lambda _: self._export("csv")),
+                                    ft.ElevatedButton("JSON", icon=ft.Icons.CODE, on_click=lambda _: self._export("json")),
+                                    ft.ElevatedButton("Image", icon=ft.Icons.IMAGE, on_click=lambda _: self._export("image")),
+                                    ft.ElevatedButton("Video", icon=ft.Icons.VIDEO_FILE, on_click=lambda _: self._export("video")),
+                                ],
+                                spacing=8,
                             ),
                         ],
-                        spacing=10,
+                        spacing=8,
                     ),
-                    padding=10,
-                    expand=True,
+                    padding=12,
                 ),
-                self.app.nav_bar.build() if hasattr(self.app, 'nav_bar') else ft.Container(),
             ],
+            spacing=0,
+            expand=True,
         )
 
     def load_results(self):
