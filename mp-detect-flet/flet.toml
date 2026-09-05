@@ -1,0 +1,25 @@
+[app]
+title = "MP Detect"
+package.name = "mpdetect"
+package.domain = "org.mpdetect"
+version = "2.0.0"
+description = "Microparticle Detection App - Flet Edition"
+
+[app.android]
+permissions = ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "INTERNET"]
+min_sdk_version = 24
+target_sdk_version = 33
+
+[app.ios]
+bundle_id = "org.mpdetect.ios"
+min_os_version = "14.0"
+
+[build]
+exclude = [
+    "tests/",
+    "venv/",
+    ".venv/",
+    "__pycache__/",
+    ".git/",
+    "*.pyc",
+]
