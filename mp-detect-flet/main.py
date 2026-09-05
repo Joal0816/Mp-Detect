@@ -4,7 +4,7 @@ import flet as ft
 from core.__version__ import __version__
 from core.file_handler import FileHandler
 from core.model_manager import ModelManager
-from core.settings_manager import load_settings
+from core.settings_manager import load_settings, save_settings
 
 
 class MPDetectApp:
@@ -60,9 +60,58 @@ class MPDetectApp:
             "models": ModelManagerScreen,
         }
 
+        # Keyboard shortcuts
+        page.on_keyboard_event = self._on_keyboard
+
         # Set up routing
         page.on_route_change = self.route_change
         page.go("/upload")
+
+    def _on_keyboard(self, e):
+        """Handle keyboard shortcuts."""
+        key = e.key
+        ctrl = e.ctrl
+        shift = e.shift
+
+        # Space - Toggle detection
+        if key == " " and not ctrl:
+            if self.current_screen and hasattr(self.current_screen, 'toggle_detection'):
+                self.current_screen.toggle_detection()
+            return
+
+        # Ctrl+O - Open file
+        if ctrl and key == "o":
+            if self.current_screen and hasattr(self.current_screen, 'pick_file'):
+                self.current_screen.pick_file()
+            return
+
+        # Ctrl+E - Quick export
+        if ctrl and key == "e":
+            if self.current_results:
+                try:
+                    from core.export import export_csv, export_annotated_image
+                    csv_path = self.file_handler.get_export_csv_path()
+                    export_csv(self.current_results, csv_path, self.settings)
+                    self.show_snackbar(f"CSV exported")
+                except Exception as e:
+                    self.show_snackbar(f"Export failed: {e}")
+            return
+
+        # [ - Decrease confidence
+        if key == "[":
+            new_val = max(0.01, self.settings.get("conf", 0.25) - 0.05)
+            self.settings["conf"] = round(new_val, 2)
+            save_settings(self.settings)
+            self.show_snackbar(f"Confidence: {self.settings['conf']:.2f}")
+            return
+
+        # ] - Increase confidence
+        if key == "]":
+            new_val = min(0.99, self.settings.get("conf", 0.25) + 0.05)
+            self.settings["conf"] = round(new_val, 2)
+            save_settings(self.settings)
+            self.show_snackbar(f"Confidence: {self.settings['conf']:.2f}")
+            return
 
     def route_change(self, route):
         self.page.views.clear()
