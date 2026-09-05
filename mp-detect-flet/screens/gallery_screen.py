@@ -30,5 +30,7 @@ class GalleryScreen:
                     alignment=ft.alignment.center,
                     expand=True,
                 ),
+                # Bottom navigation bar
+                self.app.nav_bar.build(),
             ],
         )
