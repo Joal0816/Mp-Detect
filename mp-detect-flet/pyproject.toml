@@ -28,17 +28,14 @@ dependencies = [
     "numpy>=1.26.0",
     "pillow>=10.0.0",
     "httpx>=0.27.0",
-    "psutil>=5.9.0",
 ]
 
 [project.optional-dependencies]
+tflite = ["tflite-runtime>=2.14.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
 ]
 
-[project.scripts]
-mp-detect = "mp_detect_flet.main:main"
-
 [tool.hatch.build.targets.wheel]
-packages = ["mp_detect_flet"]
+packages = ["."]

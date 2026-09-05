@@ -2,11 +2,10 @@
 """YOLO detection with auto-provider selection."""
 import os
 import cv2
-import time
 import numpy as np
 from typing import List, Tuple
 
-from core.vision import COLORS, BOX_THICKNESS, FONT_SCALE, LABEL_THICKNESS, cv2_letterbox, nms, xywh_to_xyxy, CLASSES
+from core.vision import cv2_letterbox, nms, xywh_to_xyxy, CLASSES
 
 try:
     import onnxruntime as ort

@@ -2,7 +2,7 @@
 """Analytics module for MP Detect (simplified for mobile)."""
 from typing import List, Tuple, Dict
 
-CLASSES = ["HDPE", "LDPE", "PET", "PP", "PS", "PVC"]
+from core.vision import CLASSES
 
 
 def compute_stats(results: List[Tuple]) -> Dict:

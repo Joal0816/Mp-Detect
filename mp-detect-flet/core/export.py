@@ -3,14 +3,13 @@
 import csv
 import json
 import os
-import time
 from datetime import datetime
 from typing import List, Tuple, Dict
 
 import cv2
 import numpy as np
 
-from core.vision import draw_boxes, CLASSES
+from core.vision import draw_boxes
 
 
 def export_csv(
@@ -160,46 +159,52 @@ def export_annotated_video(
     Returns:
         Path to saved video
     """
-    cap = cv2.VideoCapture(source_path)
-    if not cap.isOpened():
-        raise RuntimeError("Cannot open source video")
+    cap = None
+    writer = None
     
-    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    if fps <= 0:
-        fps = 30
-    
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    # Try different codecs
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
-    
-    if not writer.isOpened():
-        writer.release()
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")
-        writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
-    
-    if not writer.isOpened():
-        writer.release()
-        fourcc = cv2.VideoWriter_fourcc(*"X264")
-        writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
-    
-    if not writer.isOpened():
-        raise RuntimeError("Cannot create video writer with any codec")
-    
-    frame_count = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            break
+    try:
+        cap = cv2.VideoCapture(source_path)
+        if not cap.isOpened():
+            raise RuntimeError("Cannot open source video")
         
-        annotated = draw_boxes(frame, results)
-        writer.write(annotated)
-        frame_count += 1
-    
-    cap.release()
-    writer.release()
-    
-    return output_path
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        if fps <= 0:
+            fps = 30
+        
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        
+        # Try different codecs
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+        
+        if not writer.isOpened():
+            writer.release()
+            fourcc = cv2.VideoWriter_fourcc(*"avc1")
+            writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+        
+        if not writer.isOpened():
+            writer.release()
+            fourcc = cv2.VideoWriter_fourcc(*"X264")
+            writer = cv2.VideoWriter(output_path, fourcc, fps, (w, h))
+        
+        if not writer.isOpened():
+            raise RuntimeError("Cannot create video writer with any codec")
+        
+        frame_count = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                break
+            
+            annotated = draw_boxes(frame, results)
+            writer.write(annotated)
+            frame_count += 1
+        
+        return output_path
+    finally:
+        if cap is not None:
+            cap.release()
+        if writer is not None:
+            writer.release()

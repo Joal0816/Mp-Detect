@@ -20,7 +20,7 @@ def get_platform() -> str:
 
 
 class FileHandler:
-    def __init__(self, results_dir=""):
+    def __init__(self):
         platform = get_platform()
         
         if platform == "android":

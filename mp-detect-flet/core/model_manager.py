@@ -5,13 +5,11 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import cv2
 import numpy as np
 
 from core.inference_engine import BaseInferenceEngine, OnnxBackend, TFLiteBackend
 
 _REGISTRY_PATH = os.path.join(os.path.dirname(__file__), "..", "models", "model_registry.json")
-_DUMMY_FRAME = np.zeros((640, 640, 3), dtype=np.uint8)
 
 
 def _load_registry() -> dict:
@@ -165,6 +163,11 @@ class ModelManager:
         try:
             from core.inference_engine import Interpreter
         except ImportError:
+            result["valid"] = False
+            result["errors"].append("Neither tflite-runtime nor tensorflow is installed")
+            return result
+
+        if Interpreter is None:
             result["valid"] = False
             result["errors"].append("Neither tflite-runtime nor tensorflow is installed")
             return result
