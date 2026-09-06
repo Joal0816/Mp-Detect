@@ -10,7 +10,7 @@ class UploadScreen:
     def __init__(self, app):
         self.app = app
         self.selected_file = app.current_file
-        self.image_display = ft.Image(src="", width=350, height=250, fit="contain")
+        self.image_display = ft.Image(src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC", width=350, height=250, fit="contain", visible=False)
         self.progress_bar = ft.ProgressBar(visible=False, color=ft.Colors.CYAN)
         self.progress_text = ft.Text("", size=12, color=ft.Colors.CYAN)
         self.analyze_button = None
@@ -115,6 +115,7 @@ class UploadScreen:
                     _, buf = cv2.imencode('.jpg', frame)
                     b64 = base64.b64encode(buf).decode()
                     self.image_display.src = f"data:image/jpeg;base64,{b64}"
+                    self.image_display.visible = True
                     self.has_image = True
             else:
                 frame = cv2.imread(path)
@@ -122,6 +123,7 @@ class UploadScreen:
                     _, buf = cv2.imencode('.jpg', frame)
                     b64 = base64.b64encode(buf).decode()
                     self.image_display.src = f"data:image/jpeg;base64,{b64}"
+                    self.image_display.visible = True
                     self.has_image = True
         except Exception as e:
             print(f"[Upload] Error: {e}")
@@ -166,6 +168,7 @@ class UploadScreen:
             _, buf = cv2.imencode('.jpg', annotated)
             b64 = base64.b64encode(buf).decode()
             self.image_display.src = f"data:image/jpeg;base64,{b64}"
+            self.image_display.visible = True
             total = stats.get("total", 0)
             self.progress_bar.visible = False
             self.progress_text.value = f"Complete - {total} particles"
@@ -188,6 +191,7 @@ class UploadScreen:
         self.app.current_file = None
         self.app.current_results = []
         self.image_display.src = ""
+        self.image_display.visible = False
         self.has_image = False
         self.progress_bar.visible = False
         self.progress_text.value = ""

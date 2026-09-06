@@ -82,7 +82,7 @@ class ModelManagerScreen:
     def show_add_dialog(self):
         url_field = ft.TextField(label="Model URL", hint_text="https://example.com/model.onnx", expand=True)
         name_field = ft.TextField(label="Model Name", hint_text="my_model", expand=True)
-        format_dropdown = ft.Dropdown(label="Format", options=[ft.dropdown.Option("onnx"), ft.dropdown.Option("tflite")], value="onnx")
+        format_dropdown = ft.Dropdown(label="Format", options=[ft.DropdownOption("onnx"), ft.DropdownOption("tflite")], value="onnx")
         labels_field = ft.TextField(label="Labels", value="HDPE,LDPE,PET,PP,PS,PVC", expand=True)
         progress_bar = ft.ProgressBar(visible=False)
 

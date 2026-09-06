@@ -8,7 +8,7 @@ import os
 class ResultScreen:
     def __init__(self, app):
         self.app = app
-        self.image_display = ft.Image(src="", width=400, height=350, fit="contain")
+        self.image_display = ft.Image(src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC", width=400, height=350, fit="contain", visible=False)
 
         # Stats display
         self.stat_total = ft.Text("Total: 0", size=14, weight=ft.FontWeight.BOLD)
@@ -102,6 +102,7 @@ class ResultScreen:
                 _, buf = cv2.imencode('.jpg', self.app.current_annotated)
                 b64 = base64.b64encode(buf).decode()
                 self.image_display.src = f"data:image/jpeg;base64,{b64}"
+                self.image_display.visible = True
             except Exception as e:
                 print(f"[Result] Error encoding annotated image: {e}")
         elif self.app.current_file is not None:
@@ -120,6 +121,7 @@ class ResultScreen:
                     _, buf = cv2.imencode('.jpg', annotated)
                     b64 = base64.b64encode(buf).decode()
                     self.image_display.src = f"data:image/jpeg;base64,{b64}"
+                    self.image_display.visible = True
             except Exception as e:
                 print(f"[Result] Error: {e}")
 

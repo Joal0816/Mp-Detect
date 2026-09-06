@@ -23,13 +23,13 @@ class GalleryScreen:
                 ),
                 ft.Row(
                     [
-                        ft.FilterChip(label=ft.Text("All"),
+                        ft.Chip(label=ft.Text("All"),
                                      selected=self.filter == "all",
                                      on_select=lambda _: self.set_filter("all")),
-                        ft.FilterChip(label=ft.Text("Images"),
+                        ft.Chip(label=ft.Text("Images"),
                                      selected=self.filter == "images",
                                      on_select=lambda _: self.set_filter("images")),
-                        ft.FilterChip(label=ft.Text("Videos"),
+                        ft.Chip(label=ft.Text("Videos"),
                                      selected=self.filter == "videos",
                                      on_select=lambda _: self.set_filter("videos")),
                     ],

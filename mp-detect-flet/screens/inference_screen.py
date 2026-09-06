@@ -10,7 +10,7 @@ from collections import deque
 class InferenceScreen:
     def __init__(self, app):
         self.app = app
-        self.image_display = ft.Image(src="", width=400, height=400, fit="contain")
+        self.image_display = ft.Image(src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC", width=400, height=400, fit="contain", visible=False)
         self.is_processing = False
         self.detect_button = None
         self.view_results_button = None
@@ -170,6 +170,7 @@ class InferenceScreen:
                     _, buf = cv2.imencode('.jpg', frame)
                     b64 = base64.b64encode(buf).decode()
                     self.image_display.src = f"data:image/jpeg;base64,{b64}"
+                    self.image_display.visible = True
                     self._has_image = True
             else:
                 frame = cv2.imread(file_path)
@@ -177,6 +178,7 @@ class InferenceScreen:
                     _, buf = cv2.imencode('.jpg', frame)
                     b64 = base64.b64encode(buf).decode()
                     self.image_display.src = f"data:image/jpeg;base64,{b64}"
+                    self.image_display.visible = True
                     self._has_image = True
         except Exception as e:
             print(f"[Inference] Error: {e}")
@@ -229,6 +231,7 @@ class InferenceScreen:
             _, buf = cv2.imencode('.jpg', annotated)
             b64 = base64.b64encode(buf).decode()
             self.image_display.src = f"data:image/jpeg;base64,{b64}"
+            self.image_display.visible = True
 
             # Update stats display
             total = stats.get("total", 0)
@@ -312,6 +315,7 @@ class InferenceScreen:
             _, buf = cv2.imencode('.jpg', display_frame)
             b64 = base64.b64encode(buf).decode()
             self.image_display.src = f"data:image/jpeg;base64,{b64}"
+            self.image_display.visible = True
             self.hud_fps.value = f"FPS: {fps}"
 
             try:
