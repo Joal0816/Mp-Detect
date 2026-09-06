@@ -9,16 +9,16 @@ from components.theme import Colors, GRADIENT_CYAN
 
 
 class MPDetectApp:
-    NAV_ROUTES = {0: "inference", 1: "upload", 2: "gallery", 3: "models"}
+    NAV_ROUTES = {0: "field_test", 1: "upload", 2: "gallery", 3: "models"}
     NAV_INDEX = {v: k for k, v in NAV_ROUTES.items()}
     NAV_ICONS = {
-        "inference": ft.Icons.SCIENCE,
+        "field_test": ft.Icons.VIDEOCAM,
         "upload": ft.Icons.UPLOAD_FILE,
         "gallery": ft.Icons.PHOTO_LIBRARY,
         "models": ft.Icons.SMART_TOY,
     }
     NAV_LABELS = {
-        "inference": "Detect",
+        "field_test": "Field Test",
         "upload": "Upload",
         "gallery": "Gallery",
         "models": "Models",
@@ -128,7 +128,7 @@ class MPDetectApp:
                     selected_icon=ft.Icon(self.NAV_ICONS[name], color=Colors.ACCENT_CYAN),
                     label=ft.Text(self.NAV_LABELS[name], size=11),
                 )
-                for name in ["inference", "upload", "gallery", "models"]
+                for name in self.NAV_ROUTES.values()
             ],
             leading=ft.Container(
                 content=ft.Column([
@@ -175,7 +175,7 @@ class MPDetectApp:
                     selected_icon=ft.Icon(self.NAV_ICONS[name], color=Colors.ACCENT_CYAN),
                     label=ft.Text(self.NAV_LABELS[name], size=10),
                 )
-                for name in ["inference", "upload", "gallery", "models"]
+                for name in self.NAV_ROUTES.values()
             ],
         )
 
@@ -222,7 +222,10 @@ class MPDetectApp:
 
         # Import and build screen
         screen = None
-        if name == "upload":
+        if name == "field_test":
+            from screens.field_test_screen import FieldTestScreen
+            screen = FieldTestScreen(self)
+        elif name == "upload":
             from screens.upload_screen import UploadScreen
             screen = UploadScreen(self)
         elif name == "gallery":

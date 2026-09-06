@@ -1,4 +1,4 @@
-# core/inference_engine.py - ONNX/TFLite backends (ported from utils/inference_engine.py)
+# core/inference_engine.py - ONNX/TFLite backends
 """Inference engine backends for YOLO detection."""
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Tuple
@@ -21,6 +21,45 @@ except ImportError:
     except ImportError:
         Interpreter = None
         load_delegate = None
+
+
+# ── Provider Selection ──────────────────────────────────────────────────
+
+_EXECUTION_PROVIDER_PRIORITY = [
+    "CUDAExecutionProvider",
+    "TensorrtExecutionProvider",
+    "DirectMLExecutionProvider",
+    "CPUExecutionProvider",
+]
+
+_PROVIDER_DISPLAY_NAMES = {
+    "CUDAExecutionProvider": "CUDA (GPU)",
+    "TensorrtExecutionProvider": "TensorRT (GPU)",
+    "DirectMLExecutionProvider": "DirectML (GPU)",
+    "CPUExecutionProvider": "CPU",
+}
+
+
+def detect_available_providers() -> List[str]:
+    """Detect which ONNX Runtime execution providers are available."""
+    if ort is None:
+        return ["CPUExecutionProvider"]
+    available = ort.get_available_providers()
+    return [p for p in _EXECUTION_PROVIDER_PRIORITY if p in available]
+
+
+def select_best_provider() -> str:
+    """Auto-select the optimal execution provider with graceful fallback."""
+    available = detect_available_providers()
+    for provider in _EXECUTION_PROVIDER_PRIORITY:
+        if provider in available:
+            return provider
+    return "CPUExecutionProvider"
+
+
+def get_provider_display_name(provider: str) -> str:
+    """Return human-friendly display name for an execution provider."""
+    return _PROVIDER_DISPLAY_NAMES.get(provider, provider)
 
 
 class BaseInferenceEngine(ABC):
@@ -132,7 +171,6 @@ class OnnxBackend(BaseInferenceEngine):
         if ort is None:
             raise ImportError("onnxruntime is not installed")
         
-        from core.detector import select_best_provider, get_provider_display_name
         best_provider = select_best_provider()
         providers_to_use = [best_provider]
         if best_provider != "CPUExecutionProvider":
