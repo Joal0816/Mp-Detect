@@ -87,7 +87,7 @@ class InferenceScreen:
                         self.image_display,
                         ft.Container(
                             content=ft.Column([
-                                ft.Icon(ft.Icons.MICROSCOPE, size=48,
+                                ft.Icon(ft.Icons.SCIENCE, size=48,
                                         color=ft.Colors.with_opacity(0.3, ft.Colors.ON_SURFACE)),
                                 ft.Text("No Micrograph Loaded", size=16,
                                         color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE)),

@@ -21,19 +21,21 @@ class GalleryScreen:
                                          on_click=lambda: self.app.go("upload")),
                     bgcolor=ft.Colors.SURFACE,
                 ),
-                ft.Row(
-                    [
-                        ft.Chip(label=ft.Text("All"),
-                                     selected=self.filter == "all",
-                                     on_select=lambda _: self.set_filter("all")),
-                        ft.Chip(label=ft.Text("Images"),
-                                     selected=self.filter == "images",
-                                     on_select=lambda _: self.set_filter("images")),
-                        ft.Chip(label=ft.Text("Videos"),
-                                     selected=self.filter == "videos",
-                                     on_select=lambda _: self.set_filter("videos")),
-                    ],
-                    spacing=10,
+                ft.Container(
+                    content=ft.Row(
+                        [
+                            ft.Chip(label=ft.Text("All"),
+                                    selected=self.filter == "all",
+                                    on_select=lambda _: self.set_filter("all")),
+                            ft.Chip(label=ft.Text("Images"),
+                                    selected=self.filter == "images",
+                                    on_select=lambda _: self.set_filter("images")),
+                            ft.Chip(label=ft.Text("Videos"),
+                                    selected=self.filter == "videos",
+                                    on_select=lambda _: self.set_filter("videos")),
+                        ],
+                        spacing=10,
+                    ),
                     padding=ft.Padding.symmetric(horizontal=16),
                 ),
                 self.build_grid() if self.files else ft.Container(
