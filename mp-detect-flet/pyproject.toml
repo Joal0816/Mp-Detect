@@ -22,7 +22,8 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "flet>=0.21.0",
+    "flet>=0.86.0",
+    "flet-charts>=0.86.0",
     "onnxruntime>=1.19.0",
     "opencv-python-headless>=4.10.0",
     "numpy>=1.26.0",

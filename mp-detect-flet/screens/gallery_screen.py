@@ -1,5 +1,7 @@
 # screens/gallery_screen.py
 import flet as ft
+import cv2
+import base64
 import os
 
 
@@ -15,14 +17,21 @@ class GalleryScreen:
             [
                 ft.AppBar(
                     title=ft.Text("Gallery"),
-                    leading=ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=lambda: self.app.go("upload")),
+                    leading=ft.IconButton(icon=ft.Icons.ARROW_BACK,
+                                         on_click=lambda: self.app.go("upload")),
                     bgcolor=ft.Colors.SURFACE,
                 ),
                 ft.Row(
                     [
-                        ft.FilterChip(label=ft.Text("All"), selected=self.filter == "all", on_select=lambda _: self.set_filter("all")),
-                        ft.FilterChip(label=ft.Text("Images"), selected=self.filter == "images", on_select=lambda _: self.set_filter("images")),
-                        ft.FilterChip(label=ft.Text("Videos"), selected=self.filter == "videos", on_select=lambda _: self.set_filter("videos")),
+                        ft.FilterChip(label=ft.Text("All"),
+                                     selected=self.filter == "all",
+                                     on_select=lambda _: self.set_filter("all")),
+                        ft.FilterChip(label=ft.Text("Images"),
+                                     selected=self.filter == "images",
+                                     on_select=lambda _: self.set_filter("images")),
+                        ft.FilterChip(label=ft.Text("Videos"),
+                                     selected=self.filter == "videos",
+                                     on_select=lambda _: self.set_filter("videos")),
                     ],
                     spacing=10,
                     padding=ft.Padding.symmetric(horizontal=16),
@@ -30,9 +39,11 @@ class GalleryScreen:
                 self.build_grid() if self.files else ft.Container(
                     content=ft.Column(
                         [
-                            ft.Icon(ft.Icons.PHOTO_LIBRARY, size=48, color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE)),
+                            ft.Icon(ft.Icons.PHOTO_LIBRARY, size=48,
+                                   color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE)),
                             ft.Text("No media found", size=16),
-                            ft.Text("Upload from the Upload tab", size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE)),
+                            ft.Text("Upload from the Upload tab", size=12,
+                                   color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE)),
                         ],
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                         spacing=10,
@@ -57,13 +68,18 @@ class GalleryScreen:
 
     def build_grid_item(self, file_path):
         name = os.path.basename(file_path)
-        icon = ft.Icons.VIDEO_FILE if self.app.file_handler.is_video(file_path) else ft.Icons.IMAGE
+        thumbnail_src = self._get_thumbnail(file_path)
+
         return ft.Card(
             content=ft.Container(
                 content=ft.Column(
                     [
-                        ft.Icon(icon, size=48, color=ft.Colors.CYAN),
-                        ft.Text(name[:15] + "..." if len(name) > 15 else name, size=10, text_align=ft.TextAlign.CENTER),
+                        ft.Image(src=thumbnail_src, width=150, height=150, fit="contain")
+                            if thumbnail_src
+                            else ft.Icon(ft.Icons.IMAGE, size=48,
+                                        color=ft.Colors.CYAN),
+                        ft.Text(name[:20] + "..." if len(name) > 20 else name,
+                               size=10, text_align=ft.TextAlign.CENTER),
                     ],
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     alignment=ft.MainAxisAlignment.CENTER,
@@ -75,6 +91,29 @@ class GalleryScreen:
             ),
             elevation=2,
         )
+
+    def _get_thumbnail(self, file_path):
+        """Generate a base64 thumbnail from image or video first frame."""
+        try:
+            if self.app.file_handler.is_video(file_path):
+                cap = cv2.VideoCapture(file_path)
+                ret, frame = cap.read()
+                cap.release()
+                if not ret:
+                    return ""
+            else:
+                frame = cv2.imread(file_path)
+
+            if frame is None:
+                return ""
+
+            # Resize to thumbnail
+            frame = cv2.resize(frame, (150, 150))
+            _, buf = cv2.imencode('.jpg', frame)
+            return f"data:image/jpeg;base64,{base64.b64encode(buf).decode()}"
+        except Exception as e:
+            print(f"[Gallery] Thumbnail error: {e}")
+            return ""
 
     def load_files(self):
         try:

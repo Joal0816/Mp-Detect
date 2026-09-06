@@ -16,7 +16,12 @@ class ModelManagerScreen:
                 ft.AppBar(
                     title=ft.Text("Models"),
                     leading=ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=lambda: self.app.go("inference")),
-                    actions=[ft.IconButton(icon=ft.Icons.ADD, on_click=lambda: self.show_add_dialog())],
+                    actions=[
+                        ft.IconButton(icon=ft.Icons.ADD, on_click=lambda: self.show_add_dialog(),
+                                      tooltip="Add from URL"),
+                        ft.IconButton(icon=ft.Icons.FILE_UPLOAD, on_click=lambda: self.show_add_from_file_dialog(),
+                                      tooltip="Add from File"),
+                    ],
                     bgcolor=ft.Colors.SURFACE,
                 ),
                 ft.Container(
@@ -115,6 +120,32 @@ class ModelManagerScreen:
     def close_dialog(self, dialog):
         dialog.open = False
         self.app.page.overlay.remove(dialog)
+        self.app.page.update()
+
+    def show_add_from_file_dialog(self):
+        file_picker = ft.FilePicker(on_result=self._on_model_file_result)
+        self.app.page.overlay.append(file_picker)
+        self.app.page.update()
+        file_picker.pick_files(
+            dialog_title="Select Model File",
+            file_type=ft.FilePickerFileType.CUSTOM,
+            allowed_extensions=["onnx", "tflite"],
+        )
+
+    def _on_model_file_result(self, e: ft.FilePickerResultEvent):
+        if e.files and len(e.files) > 0:
+            file_path = e.files[0].path
+            try:
+                entry = self.app.model_manager.add_model_from_file(file_path, set_active=True)
+                self.app.current_engine = self.app.model_manager.get_active_engine()
+                self.load_models()
+                self.app.show_snackbar(f"Model added: {entry['name']}")
+            except Exception as ex:
+                self.app.show_snackbar(f"Failed: {ex}")
+        # Clean up overlay
+        for overlay_item in self.app.page.overlay[:]:
+            if isinstance(overlay_item, ft.FilePicker):
+                self.app.page.overlay.remove(overlay_item)
         self.app.page.update()
 
     def select_model(self, mid):

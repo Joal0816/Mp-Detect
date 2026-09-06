@@ -8,6 +8,9 @@ from core.settings_manager import load_settings, save_settings
 
 
 class MPDetectApp:
+    NAV_ROUTES = {0: "inference", 1: "upload", 2: "gallery", 3: "models"}
+    NAV_INDEX = {v: k for k, v in NAV_ROUTES.items()}
+
     def __init__(self):
         self.page = None
         self.file_handler = FileHandler()
@@ -17,11 +20,15 @@ class MPDetectApp:
         self.nav_bar = None
         self.content_area = None
         self.current_screen_name = "upload"
+        self.current_screen = None
 
         # Current state
         self.current_file = None
         self.current_results = []
         self.current_engine = None
+        self.current_annotated = None
+        self.current_stats = None
+        self.current_frame = None
 
         # Try to load active model
         try:
@@ -75,15 +82,20 @@ class MPDetectApp:
 
     def _on_nav_change(self, e):
         index = e.control.selected_index
-        routes = ["inference", "upload", "gallery", "models"]
-        if 0 <= index < len(routes):
-            self._show_screen(routes[index])
+        route = self.NAV_ROUTES.get(index)
+        if route:
+            self._show_screen(route)
 
     def _show_screen(self, name):
+        # Cleanup previous screen (e.g., stop camera)
+        if self.current_screen and hasattr(self.current_screen, 'cleanup'):
+            self.current_screen.cleanup()
+
         self.current_screen_name = name
-        self.nav_bar.selected_index = ["inference", "upload", "gallery", "models"].index(name)
+        self.nav_bar.selected_index = self.NAV_INDEX.get(name, 0)
 
         # Import and build screen
+        screen = None
         if name == "upload":
             from screens.upload_screen import UploadScreen
             screen = UploadScreen(self)
@@ -105,6 +117,7 @@ class MPDetectApp:
             screen = ResultScreen(self)
             self.content_area.content = screen.build_content()
 
+        self.current_screen = screen
         self.page.update()
 
     def go(self, route):

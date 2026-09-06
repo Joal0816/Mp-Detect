@@ -15,6 +15,7 @@ class UploadScreen:
         self.progress_text = ft.Text("", size=12, color=ft.Colors.CYAN)
         self.analyze_button = None
         self.has_image = False
+        self.file_picker = None
 
     def build_content(self) -> ft.Column:
         self.analyze_button = ft.ElevatedButton(
@@ -93,18 +94,23 @@ class UploadScreen:
             self.reset()
 
     def pick_file(self):
-        file_picker = ft.FilePicker()
-        self.app.page.overlay.append(file_picker)
+        self.file_picker = ft.FilePicker(on_result=self._on_file_result)
+        self.app.page.overlay.append(self.file_picker)
         self.app.page.update()
-        result = file_picker.pick_files(
+        self.file_picker.pick_files(
             dialog_title="Select Micrograph",
             file_type=ft.FilePickerFileType.CUSTOM,
-            allowed_extensions=["png", "jpg", "jpeg", "tif", "tiff", "bmp", "mp4", "avi", "mov", "mkv"],
+            allowed_extensions=["png", "jpg", "jpeg", "tif", "tiff", "bmp",
+                               "mp4", "avi", "mov", "mkv"],
         )
-        self.app.page.overlay.remove(file_picker)
-        self.app.page.update()
-        if result and len(result) > 0:
-            self._load_file(result[0].path)
+
+    def _on_file_result(self, e: ft.FilePickerResultEvent):
+        if e.files and len(e.files) > 0:
+            self._load_file(e.files[0].path)
+        # Clean up overlay
+        if self.file_picker in self.app.page.overlay:
+            self.app.page.overlay.remove(self.file_picker)
+            self.app.page.update()
 
     def _load_file(self, path):
         self.selected_file = path
@@ -164,6 +170,9 @@ class UploadScreen:
             stats = compute_stats(results)
             annotated = draw_boxes(frame, results)
             self.app.current_results = results
+            self.app.current_annotated = annotated
+            self.app.current_stats = stats
+            self.app.current_frame = frame
             _, buf = cv2.imencode('.jpg', annotated)
             b64 = base64.b64encode(buf).decode()
             self.image_display.src = f"data:image/jpeg;base64,{b64}"
@@ -175,6 +184,10 @@ class UploadScreen:
             self.analyze_button.disabled = False
             self.app.page.update()
             self.app.show_snackbar(f"Found {total} particles")
+            # Auto-navigate to results after short delay
+            import time
+            time.sleep(0.8)
+            self.app.go("result")
         except Exception as e:
             self.progress_bar.visible = False
             self.progress_text.value = "Error"
@@ -200,15 +213,32 @@ class UploadScreen:
                 from core.export import export_csv
                 path = self.app.file_handler.get_export_csv_path()
                 export_csv(self.app.current_results, path, self.app.settings)
-                self.app.show_snackbar("CSV saved")
+                self.app.show_snackbar(f"CSV saved: {os.path.basename(path)}")
             elif fmt == "json":
                 from core.export import export_json_report
                 path = self.app.file_handler.get_export_report_path()
-                export_json_report(self.app.current_results, path, self.app.settings, self.app.current_file, "Flet Backend")
-                self.app.show_snackbar("Report saved")
+                export_json_report(self.app.current_results, path, self.app.settings,
+                                  self.app.current_file, "Flet Backend")
+                self.app.show_snackbar(f"Report saved: {os.path.basename(path)}")
             elif fmt == "image":
-                self.app.show_snackbar("Image export")
+                from core.export import export_annotated_image
+                if self.app.current_frame is not None and self.app.current_results:
+                    path = self.app.file_handler.get_annotated_image_path()
+                    export_annotated_image(self.app.current_frame, self.app.current_results, path)
+                    self.app.show_snackbar(f"Image saved: {os.path.basename(path)}")
+                else:
+                    self.app.show_snackbar("No image to export")
             elif fmt == "video":
-                self.app.show_snackbar("Video export")
+                from core.export import export_annotated_video
+                if self.app.current_file and self.app.current_results:
+                    if self.app.file_handler.is_video(self.app.current_file):
+                        path = self.app.file_handler.get_annotated_video_path()
+                        export_annotated_video(self.app.current_file, self.app.current_results,
+                                              path, self.app.settings)
+                        self.app.show_snackbar(f"Video saved: {os.path.basename(path)}")
+                    else:
+                        self.app.show_snackbar("Source is not a video")
+                else:
+                    self.app.show_snackbar("No video to export")
         except Exception as e:
             self.app.show_snackbar(f"Export failed: {e}")
