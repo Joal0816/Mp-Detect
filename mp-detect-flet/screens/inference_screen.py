@@ -5,19 +5,29 @@ import base64
 import threading
 import time
 from collections import deque
+from components.theme import Colors, card, glass_container, metric_card
 
 
 class InferenceScreen:
     def __init__(self, app):
         self.app = app
-        self.image_display = ft.Image(src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC", width=400, height=400, fit="contain", visible=False)
+        PLACEHOLDER = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC"
+        self.image_display = ft.Image(
+            src=PLACEHOLDER, fit=ft.BoxFit.CONTAIN,
+            visible=False, border_radius=8,
+        )
         self.is_processing = False
         self.detect_button = None
         self.view_results_button = None
-        self.hud_fps = ft.Text("FPS: --", color=ft.Colors.CYAN, size=12)
-        self.hud_latency = ft.Text("Latency: --ms", color=ft.Colors.CYAN, size=12)
-        self.hud_backend = ft.Text("", color=ft.Colors.GREEN, size=12)
         self._has_image = False
+
+        # HUD
+        self.hud_fps = ft.Text("FPS: --", color=Colors.ACCENT_CYAN, size=11,
+                               font_family="monospace")
+        self.hud_latency = ft.Text("Latency: --ms", color=Colors.ACCENT_CYAN, size=11,
+                                   font_family="monospace")
+        self.hud_backend = ft.Text("", color=Colors.SUCCESS, size=11,
+                                   font_family="monospace")
 
         # Camera state
         self.camera_active = False
@@ -32,43 +42,57 @@ class InferenceScreen:
         self.detect_live_button = None
 
         # Stats display
-        self.stat_total = ft.Text("Total: 0", size=14, weight=ft.FontWeight.BOLD)
-        self.stat_avg = ft.Text("Avg Confidence: 0.00", size=12)
-        self.stat_pet = ft.Text("PET: 0", size=12)
-        self.stat_hdpe = ft.Text("HDPE: 0", size=12)
-        self.stat_pvc = ft.Text("PVC: 0", size=12)
-        self.stat_ldpe = ft.Text("LDPE: 0", size=12)
-        self.stat_pp = ft.Text("PP: 0", size=12)
-        self.stat_ps = ft.Text("PS: 0", size=12)
+        self.stat_total = ft.Text("0", size=24, weight=ft.FontWeight.BOLD, color=Colors.ACCENT_CYAN)
+        self.stat_avg = ft.Text("0.00", size=14, color=Colors.TEXT_SECONDARY)
+        self.stat_pet = ft.Text("PET: 0", size=12, color=Colors.TEXT_PRIMARY)
+        self.stat_hdpe = ft.Text("HDPE: 0", size=12, color=Colors.TEXT_PRIMARY)
+        self.stat_pvc = ft.Text("PVC: 0", size=12, color=Colors.TEXT_PRIMARY)
+        self.stat_ldpe = ft.Text("LDPE: 0", size=12, color=Colors.TEXT_PRIMARY)
+        self.stat_pp = ft.Text("PP: 0", size=12, color=Colors.TEXT_PRIMARY)
+        self.stat_ps = ft.Text("PS: 0", size=12, color=Colors.TEXT_PRIMARY)
 
     def build_content(self) -> ft.Column:
         self.detect_button = ft.Button(
             "Detect", icon=ft.Icons.PLAY_ARROW,
             on_click=self.toggle_detection,
-            bgcolor=ft.Colors.CYAN, color=ft.Colors.WHITE, width=120
+            bgcolor=Colors.ACCENT_CYAN, color=Colors.BG_PRIMARY,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+            width=140, height=40,
         )
         self.view_results_button = ft.Button(
-            "View Results", icon=ft.Icons.VISIBILITY,
-            on_click=lambda _: self.app.go("result"), visible=False
+            "Results", icon=ft.Icons.VISIBILITY,
+            on_click=lambda _: self.app.go("result"),
+            visible=False,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                side=ft.BorderSide(1, Colors.GLASS_BORDER),
+                bgcolor=Colors.GLASS_BG,
+                color=Colors.TEXT_PRIMARY,
+            ),
+            height=40,
         )
 
         # Camera controls
         self.start_camera_button = ft.Button(
             "Start Camera", icon=ft.Icons.CAMERA_ALT,
             on_click=lambda _: self.start_camera(),
-            bgcolor=ft.Colors.GREEN, color=ft.Colors.WHITE
+            bgcolor=Colors.SUCCESS, color=Colors.BG_PRIMARY,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+            height=40,
         )
         self.stop_camera_button = ft.Button(
             "Stop Camera", icon=ft.Icons.STOP,
             on_click=lambda _: self.stop_camera(),
-            bgcolor=ft.Colors.RED, color=ft.Colors.WHITE,
-            visible=False
+            bgcolor=Colors.ERROR, color=ft.Colors.WHITE,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+            visible=False, height=40,
         )
         self.detect_live_button = ft.Button(
             "Start Detection", icon=ft.Icons.PLAY_ARROW,
             on_click=lambda _: self.toggle_live_detection(),
-            bgcolor=ft.Colors.CYAN, color=ft.Colors.WHITE,
-            visible=False
+            bgcolor=Colors.ACCENT_CYAN, color=Colors.BG_PRIMARY,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+            visible=False, height=40,
         )
 
         if self.app.current_file:
@@ -80,73 +104,150 @@ class InferenceScreen:
 
         return ft.Column(
             [
-                ft.AppBar(title=ft.Text("Detect"), bgcolor=ft.Colors.SURFACE),
-                # Image display
+                # Header
                 ft.Container(
-                    content=ft.Stack([
-                        self.image_display,
-                        ft.Container(
-                            content=ft.Column([
-                                ft.Icon(ft.Icons.SCIENCE, size=48,
-                                        color=ft.Colors.with_opacity(0.3, ft.Colors.ON_SURFACE)),
-                                ft.Text("No Micrograph Loaded", size=16,
-                                        color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE)),
-                                ft.Text("Click 'Open File' or 'Start Camera'", size=12,
-                                        color=ft.Colors.with_opacity(0.3, ft.Colors.ON_SURFACE)),
-                            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
-                            alignment=ft.Alignment.CENTER,
-                            visible=not self._has_image and not self.camera_active,
+                    content=ft.Row([
+                        ft.Text("Detect", size=24, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY),
+                        ft.Text("Real-time Micrograph Analysis", size=14, color=Colors.TEXT_SECONDARY),
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    padding=ft.Padding.symmetric(horizontal=24, vertical=16),
+                ),
+
+                # Main content
+                ft.Row(
+                    [
+                        # Left: Image + HUD
+                        ft.Column(
+                            [
+                                # Image display with HUD overlay
+                                ft.Container(
+                                    content=ft.Stack([
+                                        self.image_display,
+                                        # HUD overlay
+                                        ft.Container(
+                                            content=ft.Row([
+                                                self.hud_fps,
+                                                ft.Container(width=1, height=12, bgcolor=Colors.GLASS_BORDER),
+                                                self.hud_latency,
+                                                ft.Container(width=1, height=12, bgcolor=Colors.GLASS_BORDER),
+                                                self.hud_backend,
+                                            ], spacing=8),
+                                            bgcolor=ft.Colors.with_opacity(0.7, Colors.BG_CARD),
+                                            border_radius=6,
+                                            padding=ft.Padding.symmetric(horizontal=8, vertical=4),
+                                            top=8, left=8,
+                                        ),
+                                        # Placeholder
+                                        ft.Container(
+                                            content=ft.Column([
+                                                ft.Container(
+                                                    content=ft.Icon(ft.Icons.SCIENCE, size=40, color=Colors.ACCENT_CYAN),
+                                                    bgcolor=ft.Colors.with_opacity(0.1, Colors.ACCENT_CYAN),
+                                                    border_radius=50, padding=16,
+                                                ),
+                                                ft.Text("No Micrograph Loaded", size=16, color=Colors.TEXT_PRIMARY),
+                                                ft.Text("Open a file or start camera", size=12, color=Colors.TEXT_SECONDARY),
+                                            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
+                                            alignment=ft.Alignment.CENTER,
+                                            visible=not self._has_image and not self.camera_active,
+                                        ),
+                                    ], expand=True),
+                                    border=ft.Border.all(1, Colors.GLASS_BORDER),
+                                    border_radius=10,
+                                    bgcolor=Colors.BG_CARD,
+                                    expand=True,
+                                ),
+                                # Controls
+                                ft.Container(
+                                    content=ft.Row([
+                                        # File mode controls
+                                        ft.Row([
+                                            self.detect_button,
+                                            ft.Button("Open File", icon=ft.Icons.FOLDER_OPEN,
+                                                      on_click=self._open_file,
+                                                      style=ft.ButtonStyle(
+                                                          shape=ft.RoundedRectangleBorder(radius=8),
+                                                          side=ft.BorderSide(1, Colors.GLASS_BORDER),
+                                                          bgcolor=Colors.GLASS_BG,
+                                                          color=Colors.TEXT_PRIMARY,
+                                                      ), height=40),
+                                            self.view_results_button,
+                                        ], spacing=8, visible=not self.camera_active),
+                                        # Camera mode controls
+                                        ft.Row([
+                                            self.start_camera_button,
+                                            self.stop_camera_button,
+                                            self.detect_live_button,
+                                        ], spacing=8, visible=self.camera_active),
+                                    ], alignment=ft.MainAxisAlignment.CENTER),
+                                    padding=ft.Padding.symmetric(vertical=8),
+                                ),
+                            ],
+                            expand=True,
+                            spacing=0,
                         ),
-                    ], expand=True),
-                    border=ft.Border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.OUTLINE)),
-                    border_radius=8,
-                    height=300,
-                    padding=8,
-                ),
-                # HUD row
-                ft.Container(
-                    content=ft.Row([self.hud_fps, self.hud_latency, self.hud_backend], spacing=16),
-                    padding=ft.Padding.symmetric(horizontal=8, vertical=4),
-                ),
-                # File mode buttons
-                ft.Container(
-                    content=ft.Row([
-                        self.detect_button,
-                        ft.Button("Open File", icon=ft.Icons.FOLDER_OPEN,
-                                  on_click=self._open_file),
-                        self.view_results_button,
-                    ], spacing=8),
-                    padding=8,
-                    visible=not self.camera_active,
-                ),
-                # Camera mode buttons
-                ft.Container(
-                    content=ft.Row([
-                        self.start_camera_button,
-                        self.stop_camera_button,
-                        self.detect_live_button,
-                    ], spacing=8),
-                    padding=8,
-                    visible=self.camera_active,
-                ),
-                # Stats card
-                ft.Card(
-                    content=ft.Container(
-                        content=ft.Column([
-                            ft.Text("Detection Results", size=14, weight=ft.FontWeight.BOLD),
-                            self.stat_total,
-                            self.stat_avg,
-                            ft.Divider(),
-                            ft.Row([self.stat_pet, self.stat_hdpe], spacing=10),
-                            ft.Row([self.stat_pvc, self.stat_ldpe], spacing=10),
-                            ft.Row([self.stat_pp, self.stat_ps], spacing=10),
-                        ], spacing=4),
-                        padding=12,
-                    ),
+
+                        # Right: Stats panel (desktop only)
+                        ft.Container(
+                            content=self._build_stats_panel(),
+                            width=240,
+                            visible=self.app.is_desktop if hasattr(self.app, 'is_desktop') else True,
+                        ),
+                    ],
+                    spacing=16,
+                    expand=True,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
                 ),
             ],
             spacing=0,
             expand=True,
+        )
+
+    def _build_stats_panel(self):
+        """Build the right stats panel."""
+        return ft.Container(
+            content=ft.Column([
+                # Total count - hero metric
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text("Total", size=12, color=Colors.TEXT_SECONDARY),
+                        self.stat_total,
+                        self.stat_avg,
+                    ], spacing=2),
+                    bgcolor=Colors.BG_CARD,
+                    border=ft.Border.all(1, Colors.GLASS_BORDER),
+                    border_radius=10,
+                    padding=16,
+                ),
+                # Per-class breakdown
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text("Per Class", size=12, color=Colors.TEXT_SECONDARY, weight=ft.FontWeight.W_500),
+                        ft.Divider(height=1, color=Colors.GLASS_BORDER),
+                        ft.Row([self.stat_pet, self.stat_hdpe], spacing=8),
+                        ft.Row([self.stat_pvc, self.stat_ldpe], spacing=8),
+                        ft.Row([self.stat_pp, self.stat_ps], spacing=8),
+                    ], spacing=6),
+                    bgcolor=Colors.BG_CARD,
+                    border=ft.Border.all(1, Colors.GLASS_BORDER),
+                    border_radius=10,
+                    padding=12,
+                ),
+                # Model info
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text("Model", size=12, color=Colors.TEXT_SECONDARY, weight=ft.FontWeight.W_500),
+                        ft.Text(self.app.model_manager.active_model_id or "None",
+                               size=12, color=Colors.TEXT_PRIMARY),
+                        self.hud_backend,
+                    ], spacing=4),
+                    bgcolor=Colors.BG_CARD,
+                    border=ft.Border.all(1, Colors.GLASS_BORDER),
+                    border_radius=10,
+                    padding=12,
+                ),
+            ], spacing=8, expand=True),
+            padding=ft.Padding(top=0),
         )
 
     async def _open_file(self, e=None):
@@ -182,8 +283,6 @@ class InferenceScreen:
                     self._has_image = True
         except Exception as e:
             print(f"[Inference] Error: {e}")
-
-    # ── File-based detection ──────────────────────────────────────────
 
     def toggle_detection(self, e=None):
         if self.app.current_file is None:
@@ -233,10 +332,10 @@ class InferenceScreen:
             self.image_display.src = f"data:image/jpeg;base64,{b64}"
             self.image_display.visible = True
 
-            # Update stats display
+            # Update stats
             total = stats.get("total", 0)
-            self.stat_total.value = f"Total: {total}"
-            self.stat_avg.value = f"Avg Confidence: {stats.get('avg_conf', 0):.2f}"
+            self.stat_total.value = str(total)
+            self.stat_avg.value = f"Avg: {stats.get('avg_conf', 0):.2f}"
             for cls in ["pet", "hdpe", "pvc", "ldpe", "pp", "ps"]:
                 count = stats.get("per_class", {}).get(cls.upper(), {}).get("count", 0)
                 getattr(self, f"stat_{cls}").value = f"{cls.upper()}: {count}"
@@ -253,8 +352,6 @@ class InferenceScreen:
             self.is_processing = False
             self.app.page.update()
             self.app.show_snackbar(f"Detection failed: {e}")
-
-    # ── Live camera detection ─────────────────────────────────────────
 
     def start_camera(self):
         if self.camera_active:
@@ -278,10 +375,8 @@ class InferenceScreen:
             if not ret:
                 break
 
-            # FPS calculation
             now = time.time()
             self._frame_times.append(now)
-            # Count frames in the last second
             fps = sum(1 for t in self._frame_times if now - t < 1.0)
 
             if self.detect_running and self.app.current_engine:
@@ -296,14 +391,12 @@ class InferenceScreen:
                     display_frame = draw_boxes(frame, results)
                     stats = compute_stats(results)
 
-                    # Update stats
                     total = stats.get("total", 0)
-                    self.stat_total.value = f"Total: {total}"
-                    self.stat_avg.value = f"Avg Confidence: {stats.get('avg_conf', 0):.2f}"
+                    self.stat_total.value = str(total)
+                    self.stat_avg.value = f"Avg: {stats.get('avg_conf', 0):.2f}"
                     for cls in ["pet", "hdpe", "pvc", "ldpe", "pp", "ps"]:
                         count = stats.get("per_class", {}).get(cls.upper(), {}).get("count", 0)
                         getattr(self, f"stat_{cls}").value = f"{cls.upper()}: {count}"
-
                     self.hud_latency.value = f"Latency: {latency:.0f}ms"
                 except Exception as e:
                     print(f"[Camera] Detection error: {e}")
@@ -311,7 +404,6 @@ class InferenceScreen:
             else:
                 display_frame = frame
 
-            # Convert to base64 for Flet display
             _, buf = cv2.imencode('.jpg', display_frame)
             b64 = base64.b64encode(buf).decode()
             self.image_display.src = f"data:image/jpeg;base64,{b64}"
@@ -323,21 +415,21 @@ class InferenceScreen:
             except Exception:
                 break
 
-            time.sleep(0.033)  # Target ~30 FPS
+            time.sleep(0.033)
 
     def toggle_live_detection(self):
         if self.app.current_engine is None:
-            self.app.show_snackbar("No model loaded — add a model in Models tab")
+            self.app.show_snackbar("No model loaded")
             return
         self.detect_running = not self.detect_running
         if self.detect_running:
             self.detect_live_button.text = "Stop Detection"
             self.detect_live_button.icon = ft.Icons.STOP
-            self.detect_live_button.bgcolor = ft.Colors.ORANGE
+            self.detect_live_button.bgcolor = Colors.WARNING
         else:
             self.detect_live_button.text = "Start Detection"
             self.detect_live_button.icon = ft.Icons.PLAY_ARROW
-            self.detect_live_button.bgcolor = ft.Colors.CYAN
+            self.detect_live_button.bgcolor = Colors.ACCENT_CYAN
         self.app.page.update()
 
     def stop_camera(self):
@@ -351,7 +443,7 @@ class InferenceScreen:
         self.detect_live_button.visible = False
         self.detect_live_button.text = "Start Detection"
         self.detect_live_button.icon = ft.Icons.PLAY_ARROW
-        self.detect_live_button.bgcolor = ft.Colors.CYAN
+        self.detect_live_button.bgcolor = Colors.ACCENT_CYAN
         self.hud_fps.value = "FPS: --"
         self.hud_latency.value = "Latency: --ms"
         try:
@@ -360,5 +452,4 @@ class InferenceScreen:
             pass
 
     def cleanup(self):
-        """Call when switching away from this screen."""
         self.stop_camera()

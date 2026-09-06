@@ -2,42 +2,45 @@
 import flet as ft
 import os
 import threading
+from components.theme import Colors
 
 
 class ModelManagerScreen:
     def __init__(self, app):
         self.app = app
-        self.model_list = ft.ListView(spacing=10, padding=10, expand=True)
+        self.model_list = ft.Column(spacing=8, expand=True)
 
     def build_content(self) -> ft.Column:
         self.load_models()
         return ft.Column(
             [
-                ft.AppBar(
-                    title=ft.Text("Models"),
-                    leading=ft.IconButton(icon=ft.Icons.ARROW_BACK, on_click=lambda: self.app.go("inference")),
-                    actions=[
-                        ft.IconButton(icon=ft.Icons.ADD, on_click=lambda: self.show_add_dialog(),
-                                      tooltip="Add from URL"),
-                        ft.IconButton(icon=ft.Icons.FILE_UPLOAD, on_click=lambda: self.show_add_from_file_dialog(),
-                                      tooltip="Add from File"),
-                    ],
-                    bgcolor=ft.Colors.SURFACE,
-                ),
+                # Header
                 ft.Container(
-                    content=ft.Column(
-                        [
-                            ft.Card(content=ft.Container(content=ft.Column([
-                                ft.Text("Active Model", size=14, weight=ft.FontWeight.BOLD),
-                                ft.Text(f"Model: {self.app.model_manager.active_model_id or 'None'}", size=12),
-                                ft.Text(f"Backend: {'ONNX' if self.app.current_engine and not hasattr(self.app.current_engine, 'interpreter') else 'TFLite' if self.app.current_engine else 'None'}", size=12),
-                            ], spacing=5), padding=12)),
-                            self.model_list,
-                        ],
-                        spacing=10,
-                        expand=True,
-                    ),
-                    padding=10,
+                    content=ft.Row([
+                        ft.Text("Models", size=24, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY),
+                        ft.Row([
+                            ft.IconButton(
+                                icon=ft.Icons.ADD, tooltip="Add from URL",
+                                on_click=lambda: self.show_add_dialog(),
+                                icon_color=Colors.ACCENT_CYAN,
+                            ),
+                            ft.IconButton(
+                                icon=ft.Icons.FILE_UPLOAD, tooltip="Add from File",
+                                on_click=lambda: self.show_add_from_file_dialog(),
+                                icon_color=Colors.TEXT_SECONDARY,
+                            ),
+                        ], spacing=4),
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    padding=ft.Padding.symmetric(horizontal=24, vertical=16),
+                ),
+
+                # Active model card
+                self._build_active_model_card(),
+
+                # Model list
+                ft.Container(
+                    content=self.model_list,
+                    padding=ft.Padding.symmetric(horizontal=24, vertical=8),
                     expand=True,
                 ),
             ],
@@ -45,46 +48,129 @@ class ModelManagerScreen:
             expand=True,
         )
 
+    def _build_active_model_card(self):
+        active_id = self.app.model_manager.active_model_id
+        engine = self.app.current_engine
+        backend = "ONNX" if engine and not hasattr(engine, "interpreter") else "TFLite" if engine else "None"
+
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Container(
+                        content=ft.Icon(ft.Icons.CHECK_CIRCLE, size=16, color=Colors.SUCCESS),
+                        bgcolor=ft.Colors.with_opacity(0.15, Colors.SUCCESS),
+                        border_radius=12,
+                        padding=4,
+                    ),
+                    ft.Text("Active Model", size=12, color=Colors.SUCCESS, weight=ft.FontWeight.W_500),
+                ], spacing=6),
+                ft.Text(active_id or "No model selected", size=14, color=Colors.TEXT_PRIMARY,
+                       weight=ft.FontWeight.W_500),
+                ft.Text(f"Backend: {backend}", size=11, color=Colors.TEXT_SECONDARY),
+            ], spacing=6),
+            bgcolor=Colors.BG_CARD,
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.3, Colors.SUCCESS)),
+            border_radius=10,
+            padding=16,
+            margin=ft.Margin.symmetric(horizontal=24, vertical=8),
+        )
+
     def load_models(self):
         self.model_list.controls.clear()
         models = self.app.model_manager.models
         active_id = self.app.model_manager.active_model_id
+
         if not models:
-            self.model_list.controls.append(ft.Container(content=ft.Column([
-                ft.Icon(ft.Icons.MODEL_TRAINING, size=48, color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE)),
-                ft.Text("No models found", size=16),
-                ft.Text("Add using + button", size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE)),
-            ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10), alignment=ft.Alignment.CENTER, padding=20))
+            self.model_list.controls.append(
+                ft.Container(
+                    content=ft.Column([
+                        ft.Icon(ft.Icons.MODEL_TRAINING, size=40, color=Colors.TEXT_MUTED),
+                        ft.Text("No models found", size=14, color=Colors.TEXT_SECONDARY),
+                        ft.Text("Add using + button above", size=11, color=Colors.TEXT_MUTED),
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=8),
+                    alignment=ft.Alignment.CENTER,
+                    padding=40,
+                )
+            )
         else:
             for model in models:
                 mid = model.get("id", "")
-                self.model_list.controls.append(self.build_model_card(model, mid == active_id))
+                self.model_list.controls.append(
+                    self._build_model_card(model, mid == active_id)
+                )
 
-    def build_model_card(self, model, is_active):
+    def _build_model_card(self, model, is_active):
         mid = model.get("id", "")
         name = model.get("name", "")
         fmt = model.get("format", "").upper()
-        return ft.Card(
-            content=ft.Container(
-                content=ft.Column([
-                    ft.Row([ft.Text(f"{'* ' if is_active else ''}{name}", size=14, weight=ft.FontWeight.BOLD if is_active else ft.FontWeight.NORMAL), ft.Text(f"[{fmt}]", size=12, color=ft.Colors.CYAN)], spacing=5),
-                    ft.Text(f"ID: {mid}", size=10, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE)),
-                    ft.Row([
-                        ft.Button("SELECT", on_click=lambda _, m=mid: self.select_model(m), visible=not is_active),
-                        ft.Button("VALIDATE", on_click=lambda _, p=model.get("path", ""): self.validate_model(p)),
-                        ft.IconButton(icon=ft.Icons.DELETE, on_click=lambda _, m=mid: self.delete_model(m), visible=not is_active),
-                    ], spacing=5),
-                ], spacing=5),
-                padding=12,
-            ),
+        path = model.get("path", "")
+
+        return ft.Container(
+            content=ft.Column([
+                ft.Row([
+                    ft.Text(
+                        f"{'★ ' if is_active else ''}{name}",
+                        size=14, color=Colors.TEXT_PRIMARY,
+                        weight=ft.FontWeight.BOLD if is_active else ft.FontWeight.NORMAL,
+                    ),
+                    ft.Container(
+                        content=ft.Text(fmt, size=10, color=Colors.ACCENT_CYAN),
+                        bgcolor=ft.Colors.with_opacity(0.1, Colors.ACCENT_CYAN),
+                        border_radius=4,
+                        padding=ft.Padding.symmetric(horizontal=6, vertical=2),
+                    ),
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                ft.Text(f"ID: {mid}", size=10, color=Colors.TEXT_MUTED),
+                ft.Row([
+                    ft.Button("SELECT", visible=not is_active,
+                              on_click=lambda _, m=mid: self.select_model(m),
+                              style=ft.ButtonStyle(
+                                  shape=ft.RoundedRectangleBorder(radius=6),
+                                  bgcolor=Colors.ACCENT_CYAN if not is_active else Colors.GLASS_BG,
+                                  color=Colors.BG_PRIMARY if not is_active else Colors.TEXT_MUTED,
+                              ), height=30),
+                    ft.Button("VALIDATE",
+                              on_click=lambda _, p=path: self.validate_model(p),
+                              style=ft.ButtonStyle(
+                                  shape=ft.RoundedRectangleBorder(radius=6),
+                                  side=ft.BorderSide(1, Colors.GLASS_BORDER),
+                                  bgcolor=Colors.GLASS_BG,
+                                  color=Colors.TEXT_SECONDARY,
+                              ), height=30),
+                    ft.IconButton(icon=ft.Icons.DELETE, visible=not is_active,
+                                  on_click=lambda _, m=mid: self.delete_model(m),
+                                  icon_color=Colors.ERROR, icon_size=18),
+                ], spacing=6),
+            ], spacing=6),
+            bgcolor=Colors.BG_CARD,
+            border=ft.Border.all(1, Colors.GLASS_BORDER_ACTIVE if is_active else Colors.GLASS_BORDER),
+            border_radius=10,
+            padding=14,
         )
 
     def show_add_dialog(self):
-        url_field = ft.TextField(label="Model URL", hint_text="https://example.com/model.onnx", expand=True)
-        name_field = ft.TextField(label="Model Name", hint_text="my_model", expand=True)
-        format_dropdown = ft.Dropdown(label="Format", options=[ft.DropdownOption("onnx"), ft.DropdownOption("tflite")], value="onnx")
-        labels_field = ft.TextField(label="Labels", value="HDPE,LDPE,PET,PP,PS,PVC", expand=True)
-        progress_bar = ft.ProgressBar(visible=False)
+        url_field = ft.TextField(
+            label="Model URL", hint_text="https://example.com/model.onnx",
+            expand=True, bgcolor=Colors.BG_CARD, color=Colors.TEXT_PRIMARY,
+            border_color=Colors.GLASS_BORDER, focused_border_color=Colors.ACCENT_CYAN,
+        )
+        name_field = ft.TextField(
+            label="Model Name", hint_text="my_model",
+            expand=True, bgcolor=Colors.BG_CARD, color=Colors.TEXT_PRIMARY,
+            border_color=Colors.GLASS_BORDER, focused_border_color=Colors.ACCENT_CYAN,
+        )
+        format_dropdown = ft.Dropdown(
+            label="Format",
+            options=[ft.DropdownOption("onnx"), ft.DropdownOption("tflite")],
+            value="onnx",
+            bgcolor=Colors.BG_CARD, color=Colors.TEXT_PRIMARY,
+        )
+        labels_field = ft.TextField(
+            label="Labels", value="HDPE,LDPE,PET,PP,PS,PVC",
+            expand=True, bgcolor=Colors.BG_CARD, color=Colors.TEXT_PRIMARY,
+            border_color=Colors.GLASS_BORDER, focused_border_color=Colors.ACCENT_CYAN,
+        )
+        progress_bar = ft.ProgressBar(visible=False, color=Colors.ACCENT_CYAN)
 
         def on_add(e):
             if not url_field.value or not name_field.value:
@@ -95,7 +181,12 @@ class ModelManagerScreen:
 
             def download():
                 try:
-                    self.app.model_manager.add_model_from_url(url=url_field.value, name=name_field.value, format_=format_dropdown.value, labels=[l.strip() for l in labels_field.value.split(",")], set_active=True)
+                    self.app.model_manager.add_model_from_url(
+                        url=url_field.value, name=name_field.value,
+                        format_=format_dropdown.value,
+                        labels=[l.strip() for l in labels_field.value.split(",")],
+                        set_active=True,
+                    )
                     self.load_models()
                     dialog.open = False
                     self.app.page.update()
@@ -109,9 +200,17 @@ class ModelManagerScreen:
             threading.Thread(target=download, daemon=True).start()
 
         dialog = ft.AlertDialog(
-            title=ft.Text("Add Model from URL"),
-            content=ft.Container(content=ft.Column([url_field, name_field, format_dropdown, labels_field, progress_bar], spacing=10, width=300)),
-            actions=[ft.TextButton("Cancel", on_click=lambda _: self.close_dialog(dialog)), ft.Button("Download", on_click=on_add)],
+            title=ft.Text("Add Model from URL", color=Colors.TEXT_PRIMARY),
+            content=ft.Container(
+                content=ft.Column([url_field, name_field, format_dropdown, labels_field, progress_bar], spacing=10, width=320),
+                bgcolor=Colors.BG_SURFACE,
+            ),
+            bgcolor=Colors.BG_CARD,
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda _: self.close_dialog(dialog)),
+                ft.Button("Download", on_click=on_add,
+                          bgcolor=Colors.ACCENT_CYAN, color=Colors.BG_PRIMARY),
+            ],
         )
         self.app.page.overlay.append(dialog)
         dialog.open = True
@@ -119,7 +218,8 @@ class ModelManagerScreen:
 
     def close_dialog(self, dialog):
         dialog.open = False
-        self.app.page.overlay.remove(dialog)
+        if dialog in self.app.page.overlay:
+            self.app.page.overlay.remove(dialog)
         self.app.page.update()
 
     async def show_add_from_file_dialog(self):
@@ -148,7 +248,9 @@ class ModelManagerScreen:
 
     def validate_model(self, path):
         try:
-            result = self.app.model_manager.validate_model_file(os.path.join(os.path.dirname(__file__), "..", path))
+            result = self.app.model_manager.validate_model_file(
+                os.path.join(os.path.dirname(__file__), "..", path)
+            )
             if result.get("valid"):
                 self.app.show_snackbar(f"Valid: {result.get('input_shape')}")
             else:

@@ -3,100 +3,157 @@ import flet as ft
 import cv2
 import base64
 import os
+from components.theme import Colors
 
 
 class ResultScreen:
     def __init__(self, app):
         self.app = app
-        self.image_display = ft.Image(src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC", width=400, height=350, fit="contain", visible=False)
+        PLACEHOLDER = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC"
+        self.image_display = ft.Image(
+            src=PLACEHOLDER, fit=ft.BoxFit.CONTAIN,
+            visible=False, border_radius=8,
+        )
 
-        # Stats display
-        self.stat_total = ft.Text("Total: 0", size=14, weight=ft.FontWeight.BOLD)
-        self.stat_avg = ft.Text("Avg Confidence: 0.00", size=12)
-        self.stat_pet = ft.Text("PET: 0", size=12)
-        self.stat_hdpe = ft.Text("HDPE: 0", size=12)
-        self.stat_pvc = ft.Text("PVC: 0", size=12)
-        self.stat_ldpe = ft.Text("LDPE: 0", size=12)
-        self.stat_pp = ft.Text("PP: 0", size=12)
-        self.stat_ps = ft.Text("PS: 0", size=12)
+        # Stats
+        self.stat_total = ft.Text("0", size=28, weight=ft.FontWeight.BOLD, color=Colors.ACCENT_CYAN)
+        self.stat_avg = ft.Text("0.00", size=14, color=Colors.TEXT_SECONDARY)
+        self.stat_pet = ft.Text("PET: 0", size=12, color=Colors.TEXT_PRIMARY)
+        self.stat_hdpe = ft.Text("HDPE: 0", size=12, color=Colors.TEXT_PRIMARY)
+        self.stat_pvc = ft.Text("PVC: 0", size=12, color=Colors.TEXT_PRIMARY)
+        self.stat_ldpe = ft.Text("LDPE: 0", size=12, color=Colors.TEXT_PRIMARY)
+        self.stat_pp = ft.Text("PP: 0", size=12, color=Colors.TEXT_PRIMARY)
+        self.stat_ps = ft.Text("PS: 0", size=12, color=Colors.TEXT_PRIMARY)
 
     def build_content(self) -> ft.Column:
         self.load_results()
         return ft.Column(
             [
-                ft.AppBar(
-                    title=ft.Text("Results"),
-                    leading=ft.IconButton(icon=ft.Icons.ARROW_BACK,
-                                         on_click=lambda: self.app.go("inference")),
-                    bgcolor=ft.Colors.SURFACE,
-                ),
-                # Annotated image
+                # Header with back button
                 ft.Container(
-                    content=self.image_display,
-                    border=ft.Border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.OUTLINE)),
-                    border_radius=8,
-                    height=360,
-                    padding=8,
-                ),
-                # Stats card
-                ft.Card(
-                    content=ft.Container(
-                        content=ft.Column([
-                            ft.Text("Detection Results", size=14, weight=ft.FontWeight.BOLD),
-                            self.stat_total,
-                            self.stat_avg,
-                            ft.Divider(),
-                            ft.Row([self.stat_pet, self.stat_hdpe], spacing=10),
-                            ft.Row([self.stat_pvc, self.stat_ldpe], spacing=10),
-                            ft.Row([self.stat_pp, self.stat_ps], spacing=10),
+                    content=ft.Row([
+                        ft.IconButton(
+                            icon=ft.Icons.ARROW_BACK,
+                            on_click=lambda: self.app.go("inference"),
+                            icon_color=Colors.TEXT_SECONDARY,
+                        ),
+                        ft.Text("Results", size=24, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY),
+                        ft.Row([
+                            ft.IconButton(icon=ft.Icons.SHARE, icon_color=Colors.TEXT_SECONDARY, tooltip="Share"),
+                            ft.IconButton(icon=ft.Icons.DOWNLOAD, icon_color=Colors.TEXT_SECONDARY, tooltip="Export"),
                         ], spacing=4),
-                        padding=12,
-                    ),
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=8),
                 ),
-                # Class distribution chart
-                ft.Card(
-                    content=ft.Container(
-                        content=ft.Column([
-                            ft.Text("Particle Distribution", size=14, weight=ft.FontWeight.BOLD),
-                            self._build_class_chart(),
-                        ], spacing=8),
-                        padding=12,
-                    ),
+
+                # Main content - split view on desktop
+                ft.Row(
+                    [
+                        # Left: Annotated image
+                        ft.Container(
+                            content=self.image_display,
+                            bgcolor=Colors.BG_CARD,
+                            border=ft.Border.all(1, Colors.GLASS_BORDER),
+                            border_radius=10,
+                            padding=8,
+                            expand=True,
+                        ),
+
+                        # Right: Stats + Charts
+                        ft.Container(
+                            content=ft.Column([
+                                # Total count card
+                                ft.Container(
+                                    content=ft.Column([
+                                        ft.Text("Total Particles", size=12, color=Colors.TEXT_SECONDARY),
+                                        self.stat_total,
+                                        self.stat_avg,
+                                    ], spacing=2),
+                                    bgcolor=Colors.BG_CARD,
+                                    border=ft.Border.all(1, Colors.GLASS_BORDER),
+                                    border_radius=10,
+                                    padding=16,
+                                ),
+
+                                # Per-class breakdown
+                                ft.Container(
+                                    content=ft.Column([
+                                        ft.Text("Per Class", size=12, color=Colors.TEXT_SECONDARY,
+                                               weight=ft.FontWeight.W_500),
+                                        ft.Divider(height=1, color=Colors.GLASS_BORDER),
+                                        ft.Row([self.stat_pet, self.stat_hdpe], spacing=8),
+                                        ft.Row([self.stat_pvc, self.stat_ldpe], spacing=8),
+                                        ft.Row([self.stat_pp, self.stat_ps], spacing=8),
+                                    ], spacing=6),
+                                    bgcolor=Colors.BG_CARD,
+                                    border=ft.Border.all(1, Colors.GLASS_BORDER),
+                                    border_radius=10,
+                                    padding=12,
+                                ),
+
+                                # Class distribution chart
+                                ft.Container(
+                                    content=ft.Column([
+                                        ft.Text("Distribution", size=12, color=Colors.TEXT_SECONDARY,
+                                               weight=ft.FontWeight.W_500),
+                                        self._build_class_chart(),
+                                    ], spacing=8),
+                                    bgcolor=Colors.BG_CARD,
+                                    border=ft.Border.all(1, Colors.GLASS_BORDER),
+                                    border_radius=10,
+                                    padding=12,
+                                ),
+
+                                # Confidence chart
+                                ft.Container(
+                                    content=ft.Column([
+                                        ft.Text("Confidence", size=12, color=Colors.TEXT_SECONDARY,
+                                               weight=ft.FontWeight.W_500),
+                                        self._build_confidence_chart(),
+                                    ], spacing=8),
+                                    bgcolor=Colors.BG_CARD,
+                                    border=ft.Border.all(1, Colors.GLASS_BORDER),
+                                    border_radius=10,
+                                    padding=12,
+                                ),
+                            ], spacing=8, expand=True),
+                            width=280 if hasattr(self.app, "is_desktop") and self.app.is_desktop else None,
+                        ),
+                    ],
+                    spacing=16,
+                    expand=True,
+                    vertical_alignment=ft.CrossAxisAlignment.START,
                 ),
-                # Confidence distribution chart
-                ft.Card(
-                    content=ft.Container(
-                        content=ft.Column([
-                            ft.Text("Confidence Distribution", size=14, weight=ft.FontWeight.BOLD),
-                            self._build_confidence_chart(),
-                        ], spacing=8),
-                        padding=12,
-                    ),
-                ),
+
                 # Export buttons
                 ft.Container(
-                    content=ft.Column([
-                        ft.Text("Export", size=14, weight=ft.FontWeight.BOLD),
-                        ft.Row([
-                            ft.Button("CSV", icon=ft.Icons.TABLE_CHART,
-                                             on_click=lambda _: self._export("csv")),
-                            ft.Button("JSON", icon=ft.Icons.CODE,
-                                             on_click=lambda _: self._export("json")),
-                            ft.Button("Image", icon=ft.Icons.IMAGE,
-                                             on_click=lambda _: self._export("image")),
-                            ft.Button("Video", icon=ft.Icons.VIDEO_FILE,
-                                             on_click=lambda _: self._export("video")),
-                        ], spacing=8),
-                    ], spacing=8),
-                    padding=12,
+                    content=ft.Row([
+                        self._export_button("CSV", ft.Icons.TABLE_CHART, "csv"),
+                        self._export_button("JSON", ft.Icons.CODE, "json"),
+                        self._export_button("Image", ft.Icons.IMAGE, "image"),
+                        self._export_button("Video", ft.Icons.VIDEO_FILE, "video"),
+                    ], spacing=8, alignment=ft.MainAxisAlignment.CENTER),
+                    padding=ft.Padding.symmetric(vertical=12),
                 ),
             ],
             spacing=0,
             expand=True,
         )
 
+    def _export_button(self, label, icon, fmt):
+        return ft.Button(
+            label, icon=icon,
+            on_click=lambda _, f=fmt: self._export(f),
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                side=ft.BorderSide(1, Colors.GLASS_BORDER),
+                bgcolor=Colors.GLASS_BG,
+                color=Colors.TEXT_SECONDARY,
+            ),
+            height=36,
+        )
+
     def load_results(self):
-        # Use pre-computed annotated image if available
         if self.app.current_annotated is not None:
             try:
                 _, buf = cv2.imencode('.jpg', self.app.current_annotated)
@@ -104,9 +161,8 @@ class ResultScreen:
                 self.image_display.src = f"data:image/jpeg;base64,{b64}"
                 self.image_display.visible = True
             except Exception as e:
-                print(f"[Result] Error encoding annotated image: {e}")
+                print(f"[Result] Error: {e}")
         elif self.app.current_file is not None:
-            # Fallback: draw boxes on original image
             from core.vision import draw_boxes
             try:
                 if self.app.file_handler.is_video(self.app.current_file):
@@ -125,90 +181,65 @@ class ResultScreen:
             except Exception as e:
                 print(f"[Result] Error: {e}")
 
-        # Update stats display
         stats = self.app.current_stats
         if stats:
-            total = stats.get("total", 0)
-            self.stat_total.value = f"Total: {total}"
-            self.stat_avg.value = f"Avg Confidence: {stats.get('avg_conf', 0):.2f}"
+            self.stat_total.value = str(stats.get("total", 0))
+            self.stat_avg.value = f"Avg: {stats.get('avg_conf', 0):.2f}"
             for cls in ["pet", "hdpe", "pvc", "ldpe", "pp", "ps"]:
                 count = stats.get("per_class", {}).get(cls.upper(), {}).get("count", 0)
                 getattr(self, f"stat_{cls}").value = f"{cls.upper()}: {count}"
 
     def _build_class_chart(self):
-        """Build bar chart showing particle count per class."""
         stats = self.app.current_stats
         if not stats:
-            return ft.Container(content=ft.Text("No data"), height=150)
+            return ft.Container(content=ft.Text("No data", color=Colors.TEXT_MUTED), height=80)
 
         per_class = stats.get("per_class", {})
         data = []
-        colors = [ft.Colors.RED, ft.Colors.CYAN, ft.Colors.MAGENTA,
-                  ft.Colors.YELLOW, ft.Colors.GREEN, ft.Colors.BLUE]
+        colors = [Colors.ERROR, Colors.ACCENT_CYAN, "#E040FB", Colors.WARNING, Colors.SUCCESS, Colors.ACCENT_PURPLE]
 
         for i, (cls, info) in enumerate(per_class.items()):
             count = info.get("count", 0) if isinstance(info, dict) else 0
             if count > 0:
                 data.append(ft.BarChartGroup(
                     x=i,
-                    bar_charts=[ft.BarChartRod(
-                        to_y=count,
-                        color=colors[i % len(colors)],
-                        width=20,
-                    )],
+                    bar_charts=[ft.BarChartRod(to_y=count, color=colors[i % len(colors)], width=16, border_radius=4)],
                 ))
 
-        max_y = max((info.get("count", 0) if isinstance(info, dict) else 0
-                     for info in per_class.values()), default=10)
+        max_y = max((info.get("count", 0) if isinstance(info, dict) else 0 for info in per_class.values()), default=10)
         if max_y == 0:
             max_y = 10
 
         return ft.BarChart(
-            expand=True,
-            bar_groups=data,
-            max_y=max_y,
-            left_axis=ft.ChartAxis(labels_size=40),
+            expand=True, bar_groups=data, max_y=max_y,
+            left_axis=ft.ChartAxis(labels_size=30),
             bottom_axis=ft.ChartAxis(
-                labels=[ft.ChartAxisLabel(label=cls, rotate=-45)
-                        for cls in per_class.keys()],
-                labels_size=60,
+                labels=[ft.ChartAxisLabel(label=cls, rotate=-45) for cls in per_class.keys()],
+                labels_size=50,
             ),
-            height=200,
+            height=120,
         )
 
     def _build_confidence_chart(self):
-        """Build bar chart showing confidence distribution."""
         results = self.app.current_results
         if not results:
-            return ft.Container(content=ft.Text("No data"), height=150)
+            return ft.Container(content=ft.Text("No data", color=Colors.TEXT_MUTED), height=80)
 
-        # Bucket confidence values
         buckets = {"0-0.2": 0, "0.2-0.4": 0, "0.4-0.6": 0, "0.6-0.8": 0, "0.8-1.0": 0}
         for _, _, conf in results:
-            if conf < 0.2:
-                buckets["0-0.2"] += 1
-            elif conf < 0.4:
-                buckets["0.2-0.4"] += 1
-            elif conf < 0.6:
-                buckets["0.4-0.6"] += 1
-            elif conf < 0.8:
-                buckets["0.6-0.8"] += 1
-            else:
-                buckets["0.8-1.0"] += 1
+            if conf < 0.2: buckets["0-0.2"] += 1
+            elif conf < 0.4: buckets["0.2-0.4"] += 1
+            elif conf < 0.6: buckets["0.4-0.6"] += 1
+            elif conf < 0.8: buckets["0.6-0.8"] += 1
+            else: buckets["0.8-1.0"] += 1
 
         data = []
-        colors = [ft.Colors.RED_300, ft.Colors.ORANGE_300, ft.Colors.YELLOW_300,
-                  ft.Colors.LIGHT_GREEN_300, ft.Colors.GREEN_300]
-
+        colors = ["#FF5252", "#FF9800", "#FFC107", "#8BC34A", "#4CAF50"]
         for i, (label, count) in enumerate(buckets.items()):
             if count > 0:
                 data.append(ft.BarChartGroup(
                     x=i,
-                    bar_charts=[ft.BarChartRod(
-                        to_y=count,
-                        color=colors[i % len(colors)],
-                        width=20,
-                    )],
+                    bar_charts=[ft.BarChartRod(to_y=count, color=colors[i % len(colors)], width=16, border_radius=4)],
                 ))
 
         max_y = max(buckets.values(), default=10)
@@ -216,16 +247,13 @@ class ResultScreen:
             max_y = 10
 
         return ft.BarChart(
-            expand=True,
-            bar_groups=data,
-            max_y=max_y,
-            left_axis=ft.ChartAxis(labels_size=40),
+            expand=True, bar_groups=data, max_y=max_y,
+            left_axis=ft.ChartAxis(labels_size=30),
             bottom_axis=ft.ChartAxis(
-                labels=[ft.ChartAxisLabel(label=label, rotate=-45)
-                        for label in buckets.keys()],
-                labels_size=60,
+                labels=[ft.ChartAxisLabel(label=label, rotate=-45) for label in buckets.keys()],
+                labels_size=50,
             ),
-            height=200,
+            height=120,
         )
 
     def _export(self, fmt):

@@ -4,75 +4,75 @@ import cv2
 import base64
 import os
 import threading
+from components.theme import Colors, GRADIENT_CYAN, card, glass_container, metric_card
 
 
 class UploadScreen:
     def __init__(self, app):
         self.app = app
         self.selected_file = app.current_file
-        self.image_display = ft.Image(src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC", width=350, height=250, fit="contain", visible=False)
-        self.progress_bar = ft.ProgressBar(visible=False, color=ft.Colors.CYAN)
-        self.progress_text = ft.Text("", size=12, color=ft.Colors.CYAN)
+        PLACEHOLDER = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC"
+        self.image_display = ft.Image(
+            src=PLACEHOLDER, width=400, height=280,
+            fit=ft.BoxFit.CONTAIN, visible=False,
+            border_radius=8,
+        )
+        self.progress_bar = ft.ProgressBar(
+            visible=False, color=Colors.ACCENT_CYAN,
+            bgcolor=Colors.BG_CARD, border_radius=4,
+        )
+        self.progress_text = ft.Text("", size=12, color=Colors.ACCENT_CYAN)
         self.analyze_button = None
         self.has_image = False
 
     def build_content(self) -> ft.Column:
         self.analyze_button = ft.Button(
-            "Select File",
-            icon=ft.Icons.FOLDER_OPEN,
+            "Analyze", icon=ft.Icons.PLAY_ARROW,
             on_click=self.handle_action,
-            bgcolor=ft.Colors.CYAN,
-            color=ft.Colors.WHITE,
-            expand=True,
+            bgcolor=Colors.ACCENT_CYAN, color=Colors.BG_PRIMARY,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
+            width=200, height=44,
         )
 
         return ft.Column(
             [
-                ft.AppBar(title=ft.Text("Upload & Detect"), bgcolor=ft.Colors.SURFACE),
+                # Header
+                ft.Container(
+                    content=ft.Row([
+                        ft.Text("Upload", size=24, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY),
+                        ft.Text("Micrograph Analysis", size=14, color=Colors.TEXT_SECONDARY),
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    padding=ft.Padding.symmetric(horizontal=24, vertical=16),
+                ),
+
+                # Main content area
                 ft.Container(
                     content=ft.Column(
                         [
+                            # Drop zone / Image preview
+                            self._build_upload_area(),
+
+                            # Progress
                             ft.Container(
-                                content=ft.Stack(
-                                    [
-                                        self.image_display,
-                                        ft.Container(
-                                            content=ft.Column(
-                                                [
-                                                    ft.Icon(ft.Icons.IMAGE_SEARCH, size=48, color=ft.Colors.with_opacity(0.3, ft.Colors.ON_SURFACE)),
-                                                    ft.Text("No Image/Video Selected", size=14, color=ft.Colors.with_opacity(0.5, ft.Colors.ON_SURFACE)),
-                                                ],
-                                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                                spacing=8,
-                                            ),
-                                            alignment=ft.Alignment.CENTER,
-                                            visible=not self.has_image,
-                                        ),
-                                    ],
-                                    expand=True,
-                                ),
-                                height=250,
-                                border=ft.Border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.OUTLINE)),
-                                border_radius=8,
+                                content=ft.Column([
+                                    self.progress_text,
+                                    self.progress_bar,
+                                ], spacing=4),
+                                padding=ft.Padding.symmetric(horizontal=24),
+                                visible=self.progress_bar.visible,
                             ),
-                            ft.Container(content=ft.Column([self.progress_text, self.progress_bar], spacing=4), padding=ft.Padding.symmetric(horizontal=16), visible=self.progress_bar.visible),
-                            ft.Container(
-                                content=ft.Row([self.analyze_button], spacing=8),
-                                padding=ft.Padding.symmetric(horizontal=16, vertical=8),
-                            ),
+
+                            # Action buttons
                             ft.Container(
                                 content=ft.Row(
-                                    [
-                                        ft.Button("CSV", icon=ft.Icons.TABLE_CHART, on_click=lambda _: self._export("csv")),
-                                        ft.Button("JSON", icon=ft.Icons.CODE, on_click=lambda _: self._export("json")),
-                                        ft.Button("Image", icon=ft.Icons.IMAGE, on_click=lambda _: self._export("image")),
-                                        ft.Button("Video", icon=ft.Icons.VIDEO_FILE, on_click=lambda _: self._export("video")),
-                                    ],
-                                    spacing=8,
+                                    [self.analyze_button],
+                                    alignment=ft.MainAxisAlignment.CENTER,
                                 ),
-                                padding=ft.Padding.symmetric(horizontal=16),
-                                visible=self.app.current_results is not None and len(self.app.current_results) > 0,
+                                padding=ft.Padding.symmetric(vertical=16),
                             ),
+
+                            # Export buttons
+                            self._build_export_row(),
                         ],
                         spacing=0,
                         expand=True,
@@ -82,6 +82,79 @@ class UploadScreen:
             ],
             spacing=0,
             expand=True,
+        )
+
+    def _build_upload_area(self):
+        """Build the upload/drop zone with gradient border."""
+        # Gradient border effect
+        return ft.Container(
+            content=ft.Stack([
+                # Image display
+                self.image_display,
+                # Placeholder overlay
+                ft.Container(
+                    content=ft.Column([
+                        ft.Container(
+                            content=ft.Icon(ft.Icons.CLOUD_UPLOAD, size=40, color=Colors.ACCENT_CYAN),
+                            bgcolor=ft.Colors.with_opacity(0.1, Colors.ACCENT_CYAN),
+                            border_radius=50,
+                            padding=16,
+                        ),
+                        ft.Text("Drop image or video here", size=16, color=Colors.TEXT_PRIMARY, weight=ft.FontWeight.W_500),
+                        ft.Text("or click to browse files", size=12, color=Colors.TEXT_SECONDARY),
+                        ft.Container(
+                            content=ft.Row([
+                                ft.Icon(ft.Icons.IMAGE, size=14, color=Colors.TEXT_MUTED),
+                                ft.Text("PNG, JPG, TIF, BMP, MP4, AVI", size=11, color=Colors.TEXT_MUTED),
+                            ], spacing=4, alignment=ft.MainAxisAlignment.CENTER),
+                            margin=ft.Margin.only(top=8),
+                        ),
+                    ],
+                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                        spacing=8,
+                    ),
+                    alignment=ft.Alignment.CENTER,
+                    visible=not self.has_image,
+                ),
+            ], expand=True),
+            height=280,
+            border=ft.Border.all(2, Colors.GLASS_BORDER_ACTIVE),
+            border_radius=12,
+            bgcolor=Colors.BG_CARD,
+            margin=ft.Margin.symmetric(horizontal=24, vertical=8),
+            on_click=lambda _: self.handle_action(),
+            animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
+        )
+
+    def _build_export_row(self):
+        """Build export buttons row."""
+        visible = self.app.current_results is not None and len(self.app.current_results) > 0
+        return ft.Container(
+            content=ft.Row(
+                [
+                    self._export_button("CSV", ft.Icons.TABLE_CHART, "csv"),
+                    self._export_button("JSON", ft.Icons.CODE, "json"),
+                    self._export_button("Image", ft.Icons.IMAGE, "image"),
+                    self._export_button("Video", ft.Icons.VIDEO_FILE, "video"),
+                ],
+                spacing=8,
+                alignment=ft.MainAxisAlignment.CENTER,
+            ),
+            padding=ft.Padding.symmetric(horizontal=24, vertical=8),
+            visible=visible,
+        )
+
+    def _export_button(self, label, icon, fmt):
+        return ft.Button(
+            label, icon=icon,
+            on_click=lambda _, f=fmt: self._export(f),
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                side=ft.BorderSide(1, Colors.GLASS_BORDER),
+                bgcolor=Colors.GLASS_BG,
+                color=Colors.TEXT_SECONDARY,
+            ),
+            height=36,
         )
 
     async def handle_action(self, e=None):
@@ -171,7 +244,7 @@ class UploadScreen:
             self.image_display.visible = True
             total = stats.get("total", 0)
             self.progress_bar.visible = False
-            self.progress_text.value = f"Complete - {total} particles"
+            self.progress_text.value = f"Found {total} particles"
             self.analyze_button.text = "New File"
             self.analyze_button.icon = ft.Icons.ADD
             self.analyze_button.disabled = False
@@ -190,13 +263,12 @@ class UploadScreen:
         self.selected_file = None
         self.app.current_file = None
         self.app.current_results = []
-        self.image_display.src = ""
         self.image_display.visible = False
         self.has_image = False
         self.progress_bar.visible = False
         self.progress_text.value = ""
-        self.analyze_button.text = "Select File"
-        self.analyze_button.icon = ft.Icons.FOLDER_OPEN
+        self.analyze_button.text = "Analyze"
+        self.analyze_button.icon = ft.Icons.PLAY_ARROW
         self.app.page.update()
 
     def _export(self, fmt):
