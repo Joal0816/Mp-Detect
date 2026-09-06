@@ -185,10 +185,7 @@ class YOLODetector:
         overall = (conf_sum / total) if total else 0.0
         det_stats = {"per_class": avg_per_class, "total": total, "avg_conf": overall}
 
-        from core.vision import draw_boxes
-        annotated = draw_boxes(original_frame, raw_detections)
-
-        return det_stats, annotated, raw_detections
+        return raw_detections
 
 
 Detector = YOLODetector

@@ -8,6 +8,7 @@ class ModelManagerScreen:
     def __init__(self, app):
         self.app = app
         self.model_list = ft.ListView(spacing=10, padding=10, expand=True)
+        self._file_picker = None
 
     def build_content(self) -> ft.Column:
         self.load_models()
@@ -123,10 +124,10 @@ class ModelManagerScreen:
         self.app.page.update()
 
     def show_add_from_file_dialog(self):
-        file_picker = ft.FilePicker(on_result=self._on_model_file_result)
-        self.app.page.overlay.append(file_picker)
+        self._file_picker = ft.FilePicker(on_result=self._on_model_file_result)
+        self.app.page.overlay.append(self._file_picker)
         self.app.page.update()
-        file_picker.pick_files(
+        self._file_picker.pick_files(
             dialog_title="Select Model File",
             file_type=ft.FilePickerFileType.CUSTOM,
             allowed_extensions=["onnx", "tflite"],
@@ -142,10 +143,10 @@ class ModelManagerScreen:
                 self.app.show_snackbar(f"Model added: {entry['name']}")
             except Exception as ex:
                 self.app.show_snackbar(f"Failed: {ex}")
-        # Clean up overlay
-        for overlay_item in self.app.page.overlay[:]:
-            if isinstance(overlay_item, ft.FilePicker):
-                self.app.page.overlay.remove(overlay_item)
+        # Clean up only this specific FilePicker
+        if self._file_picker and self._file_picker in self.app.page.overlay:
+            self.app.page.overlay.remove(self._file_picker)
+        self._file_picker = None
         self.app.page.update()
 
     def select_model(self, mid):

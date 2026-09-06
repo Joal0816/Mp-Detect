@@ -39,4 +39,4 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["."]
+packages = ["core", "screens", "components"]

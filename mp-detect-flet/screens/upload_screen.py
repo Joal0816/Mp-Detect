@@ -94,9 +94,10 @@ class UploadScreen:
             self.reset()
 
     def pick_file(self):
-        self.file_picker = ft.FilePicker(on_result=self._on_file_result)
-        self.app.page.overlay.append(self.file_picker)
-        self.app.page.update()
+        if self.file_picker is None:
+            self.file_picker = ft.FilePicker(on_result=self._on_file_result)
+            self.app.page.overlay.append(self.file_picker)
+            self.app.page.update()
         self.file_picker.pick_files(
             dialog_title="Select Micrograph",
             file_type=ft.FilePickerFileType.CUSTOM,
@@ -107,10 +108,7 @@ class UploadScreen:
     def _on_file_result(self, e: ft.FilePickerResultEvent):
         if e.files and len(e.files) > 0:
             self._load_file(e.files[0].path)
-        # Clean up overlay
-        if self.file_picker in self.app.page.overlay:
-            self.app.page.overlay.remove(self.file_picker)
-            self.app.page.update()
+        # Don't remove from overlay - reuse for next pick
 
     def _load_file(self, path):
         self.selected_file = path
@@ -184,9 +182,7 @@ class UploadScreen:
             self.analyze_button.disabled = False
             self.app.page.update()
             self.app.show_snackbar(f"Found {total} particles")
-            # Auto-navigate to results after short delay
-            import time
-            time.sleep(0.8)
+            # Navigate to results
             self.app.go("result")
         except Exception as e:
             self.progress_bar.visible = False

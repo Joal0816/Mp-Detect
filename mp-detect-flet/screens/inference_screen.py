@@ -4,6 +4,7 @@ import cv2
 import base64
 import threading
 import time
+from collections import deque
 
 
 class InferenceScreen:
@@ -24,7 +25,7 @@ class InferenceScreen:
         self.cap = None
         self.detect_running = False
         self._camera_thread = None
-        self._frame_times = []
+        self._frame_times = deque(maxlen=120)
 
         # Camera controls
         self.start_camera_button = None
@@ -150,9 +151,10 @@ class InferenceScreen:
         )
 
     def _open_file(self):
-        self.file_picker = ft.FilePicker(on_result=self._on_file_result)
-        self.app.page.overlay.append(self.file_picker)
-        self.app.page.update()
+        if self.file_picker is None:
+            self.file_picker = ft.FilePicker(on_result=self._on_file_result)
+            self.app.page.overlay.append(self.file_picker)
+            self.app.page.update()
         self.file_picker.pick_files(
             dialog_title="Select Micrograph",
             file_type=ft.FilePickerFileType.CUSTOM,
@@ -164,10 +166,7 @@ class InferenceScreen:
         if e.files and len(e.files) > 0:
             self._load_image(e.files[0].path)
             self.app.current_file = e.files[0].path
-        # Clean up overlay
-        if self.file_picker in self.app.page.overlay:
-            self.app.page.overlay.remove(self.file_picker)
-            self.app.page.update()
+        # Don't remove from overlay - reuse for next pick
 
     def _load_image(self, file_path):
         try:
@@ -287,8 +286,8 @@ class InferenceScreen:
             # FPS calculation
             now = time.time()
             self._frame_times.append(now)
-            self._frame_times = [t for t in self._frame_times if now - t < 1.0]
-            fps = len(self._frame_times)
+            # Count frames in the last second
+            fps = sum(1 for t in self._frame_times if now - t < 1.0)
 
             if self.detect_running and self.app.current_engine:
                 try:
