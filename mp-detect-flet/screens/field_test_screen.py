@@ -1,16 +1,15 @@
-# screens/field_test_screen.py - Primary field-testing screen
-"""Camera-first field testing screen for microplastic detection."""
+# screens/field_test_screen.py - High-performance field testing screen
+"""Camera-first field testing screen with optimized performance and modern UI."""
 import flet as ft
 import cv2
 import base64
 import threading
 import time
-from collections import deque
 from components.theme import Colors
 
 
 class FieldTestScreen:
-    """Dedicated field-testing screen with camera-first design."""
+    """High-performance field-testing screen with decoupled camera and inference."""
     
     def __init__(self, app):
         self.app = app
@@ -21,28 +20,27 @@ class FieldTestScreen:
         self.session_id = None
         self.detection_count = 0
         
-        # Camera state
+        # Camera state - using high-performance camera
         self.camera_active = False
-        self.cap = None
-        self.detect_running = False
-        self._camera_thread = None
-        self._frame_times = deque(maxlen=120)
+        self.camera = None
+        self._display_thread = None
+        self._detect_running = False
         
         # UI elements
+        PLACEHOLDER = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC"
         self.image_display = ft.Image(
-            src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC",
-            fit=ft.BoxFit.CONTAIN, visible=False, border_radius=8,
+            src=PLACEHOLDER, fit=ft.BoxFit.COVER,
+            visible=True, border_radius=28,
         )
         
-        # HUD
-        self.hud_fps = ft.Text("FPS: --", color=Colors.ACCENT_CYAN, size=11, font_family="monospace")
-        self.hud_latency = ft.Text("Latency: --ms", color=Colors.ACCENT_CYAN, size=11, font_family="monospace")
-        self.hud_backend = ft.Text("", color=Colors.SUCCESS, size=11, font_family="monospace")
+        # HUD pills
+        self.hud_fps = self._create_hud_pill("FPS: --", ft.Icons.SPEED)
+        self.hud_latency = self._create_hud_pill("Latency: --ms", ft.Icons.TIMER)
+        self.hud_particles = self._create_hud_pill("0", ft.Icons.BUBBLE_CHART)
         
         # Session info
         self.session_id_text = ft.Text("No active session", size=12, color=Colors.TEXT_SECONDARY)
         self.location_text = ft.Text("Location: --", size=11, color=Colors.TEXT_MUTED)
-        self.particle_count = ft.Text("0", size=28, weight=ft.FontWeight.BOLD, color=Colors.ACCENT_CYAN)
         
         # Controls
         self.start_session_button = None
@@ -50,124 +48,138 @@ class FieldTestScreen:
         self.capture_button = None
         self.detect_toggle = None
 
+    def _create_hud_pill(self, text: str, icon: ft.Icons) -> ft.Container:
+        """Create a glassmorphic HUD pill."""
+        text_widget = ft.Text(text, size=11, color=Colors.ACCENT_CYAN, 
+                             font_family="monospace", weight=ft.FontWeight.W_500)
+        return ft.Container(
+            content=ft.Row([
+                ft.Icon(icon, size=14, color=Colors.ACCENT_CYAN),
+                text_widget,
+            ], spacing=4),
+            bgcolor=ft.Colors.with_opacity(0.6, Colors.BG_CARD),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, Colors.ACCENT_CYAN)),
+            border_radius=20,
+            padding=ft.Padding.symmetric(horizontal=10, vertical=6),
+            data=text_widget,
+        )
+
     def build_content(self) -> ft.Column:
         self.start_session_button = ft.Button(
             "Start Session", icon=ft.Icons.PLAY_CIRCLE,
             on_click=lambda _: self.start_session(),
             bgcolor=Colors.SUCCESS, color=Colors.BG_PRIMARY,
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-            height=44, expand=True,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=24)),
+            height=48, expand=True,
         )
         self.stop_session_button = ft.Button(
             "Stop Session", icon=ft.Icons.STOP_CIRCLE,
             on_click=lambda _: self.stop_session(),
             bgcolor=Colors.ERROR, color=ft.Colors.WHITE,
-            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8)),
-            visible=False, height=44, expand=True,
+            style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=24)),
+            visible=False, height=48, expand=True,
         )
         self.capture_button = ft.Button(
             "Capture", icon=ft.Icons.CAMERA,
             on_click=lambda _: self.capture_frame(),
             style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=8),
-                side=ft.BorderSide(1, Colors.GLASS_BORDER),
-                bgcolor=Colors.GLASS_BG, color=Colors.TEXT_PRIMARY,
+                shape=ft.RoundedRectangleBorder(radius=20),
+                bgcolor=ft.Colors.with_opacity(0.15, Colors.ACCENT_CYAN),
+                color=Colors.ACCENT_CYAN,
             ),
-            visible=False, height=40, expand=True,
+            visible=False, height=44, expand=True,
         )
         self.detect_toggle = ft.Button(
             "Auto-Detect", icon=ft.Icons.AUTO_FIX_HIGH,
             on_click=lambda _: self.toggle_detection(),
             style=ft.ButtonStyle(
-                shape=ft.RoundedRectangleBorder(radius=8),
-                side=ft.BorderSide(1, Colors.GLASS_BORDER),
-                bgcolor=Colors.GLASS_BG, color=Colors.TEXT_PRIMARY,
+                shape=ft.RoundedRectangleBorder(radius=20),
+                bgcolor=ft.Colors.with_opacity(0.15, Colors.ACCENT_CYAN),
+                color=Colors.ACCENT_CYAN,
             ),
-            visible=False, height=40, expand=True,
+            visible=False, height=44, expand=True,
         )
 
         return ft.Column(
             [
-                # Header
+                # Header - minimal
                 ft.Container(
                     content=ft.Row([
                         ft.Column([
-                            ft.Text("Field Test", size=24, weight=ft.FontWeight.BOLD, color=Colors.TEXT_PRIMARY),
+                            ft.Text("Field Test", size=20, weight=ft.FontWeight.BOLD, 
+                                   color=Colors.TEXT_PRIMARY),
                             self.session_id_text,
                         ], spacing=2),
                         ft.Row([
-                            ft.Icon(ft.Icons.INFO_OUTLINE, size=16, color=Colors.TEXT_SECONDARY),
+                            ft.Icon(ft.Icons.LOCATION_ON, size=14, color=Colors.ACCENT_CYAN),
                             self.location_text,
                         ], spacing=4),
                     ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                    padding=ft.Padding.symmetric(horizontal=24, vertical=12),
+                    padding=ft.Padding.symmetric(horizontal=20, vertical=10),
                 ),
 
-                # Camera view (takes most of the screen)
+                # Camera viewport - full bleed with rounded corners
                 ft.Container(
                     content=ft.Stack([
                         self.image_display,
-                        # HUD overlay
+                        
+                        # Floating HUD pills - top left
                         ft.Container(
                             content=ft.Row([
                                 self.hud_fps,
-                                ft.Container(width=1, height=12, bgcolor=Colors.GLASS_BORDER),
                                 self.hud_latency,
-                                ft.Container(width=1, height=12, bgcolor=Colors.GLASS_BORDER),
-                                self.hud_backend,
+                                self.hud_particles,
                             ], spacing=8),
-                            bgcolor=ft.Colors.with_opacity(0.7, Colors.BG_CARD),
-                            border_radius=6,
-                            padding=ft.Padding.symmetric(horizontal=8, vertical=4),
-                            top=8, left=8,
+                            top=16, left=16,
                         ),
-                        # Particle count overlay
+                        
+                        # Capture indicator
                         ft.Container(
-                            content=ft.Row([
-                                ft.Icon(ft.Icons.BUBBLE_CHART, size=20, color=Colors.ACCENT_CYAN),
-                                self.particle_count,
-                                ft.Text("particles", size=12, color=Colors.TEXT_SECONDARY),
-                            ], spacing=4),
-                            bgcolor=ft.Colors.with_opacity(0.7, Colors.BG_CARD),
-                            border_radius=6,
-                            padding=ft.Padding.symmetric(horizontal=8, vertical=4),
-                            top=8, right=8,
+                            content=ft.Container(
+                                width=12, height=12,
+                                bgcolor=Colors.ERROR,
+                                border_radius=6,
+                                visible=self.session_active,
+                            ),
+                            top=16, right=16,
                         ),
+                        
                         # Placeholder
                         ft.Container(
                             content=ft.Column([
                                 ft.Container(
-                                    content=ft.Icon(ft.Icons.VIDEOCAM, size=48, color=Colors.TEXT_MUTED),
-                                    bgcolor=Colors.GLASS_BG, border_radius=50, padding=20,
+                                    content=ft.Icon(ft.Icons.VIDEOCAM_OFF, size=48, 
+                                                   color=Colors.TEXT_MUTED),
+                                    bgcolor=ft.Colors.with_opacity(0.1, Colors.BG_CARD),
+                                    border_radius=28, padding=20,
                                 ),
-                                ft.Text("Start a session to begin", size=16, color=Colors.TEXT_PRIMARY),
-                                ft.Text("Camera will activate automatically", size=12, color=Colors.TEXT_SECONDARY),
+                                ft.Text("Tap Start Session", size=16, 
+                                       color=Colors.TEXT_PRIMARY, weight=ft.FontWeight.W_500),
+                                ft.Text("Camera will activate automatically", size=12, 
+                                       color=Colors.TEXT_SECONDARY),
                             ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
                             alignment=ft.Alignment.CENTER,
                             visible=not self.camera_active,
                         ),
                     ], expand=True),
-                    bgcolor=Colors.BG_CARD,
-                    border=ft.Border.all(1, Colors.GLASS_BORDER),
-                    border_radius=10,
                     expand=True,
+                    border_radius=28,
+                    clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
                 ),
 
-                # Controls
+                # Controls - pill-shaped buttons
                 ft.Container(
                     content=ft.Column([
-                        # Session controls
                         ft.Row([
                             self.start_session_button,
                             self.stop_session_button,
-                        ], spacing=8),
-                        # Action controls (visible during session)
+                        ], spacing=12),
                         ft.Row([
                             self.capture_button,
                             self.detect_toggle,
-                        ], spacing=8, visible=self.session_active),
-                    ], spacing=8),
-                    padding=ft.Padding.symmetric(horizontal=24, vertical=12),
+                        ], spacing=12, visible=self.session_active),
+                    ], spacing=10),
+                    padding=ft.Padding.symmetric(horizontal=20, vertical=12),
                 ),
             ], spacing=0, expand=True,
         )
@@ -221,13 +233,13 @@ class FieldTestScreen:
         self.capture_button.visible = True
         self.detect_toggle.visible = True
         
-        # Start camera
+        # Start high-performance camera
         self._start_camera()
         
         # Update location
         try:
             from core.location import location_service
-            self.location_text.value = f"Location: {location_service.format_coordinates()}"
+            self.location_text.value = location_service.format_coordinates()
         except Exception:
             self.location_text.value = "Location: unavailable"
         
@@ -267,104 +279,96 @@ class FieldTestScreen:
         self.app.show_snackbar(f"Session completed: {self.detection_count} particles")
 
     def _start_camera(self):
-        """Start camera capture."""
-        with self._lock:
-            if self.camera_active:
-                return
-            try:
-                self.cap = cv2.VideoCapture(0)
-                if not self.cap.isOpened():
-                    self.app.show_snackbar("Cannot open camera")
-                    return
-                self.camera_active = True
-            except Exception as e:
-                self.app.show_snackbar(f"Camera error: {e}")
-                return
+        """Start camera with high-performance capture."""
+        from core.camera import HighPerformanceCamera
         
-        self._camera_thread = threading.Thread(target=self._capture_loop, daemon=True)
-        self._camera_thread.start()
+        try:
+            fps_target = self.app.settings.get("camera_fps", 15)
+            self.camera = HighPerformanceCamera(camera_id=0, target_fps=fps_target)
+            
+            # Start with display callback
+            self.camera.start(process_callback=self._process_frame)
+            self.camera_active = True
+            
+            # Start display update thread
+            self._display_thread = threading.Thread(
+                target=self._display_loop, daemon=True
+            )
+            self._display_thread.start()
+            
+        except Exception as e:
+            self.app.show_snackbar(f"Camera error: {e}")
 
     def _stop_camera(self):
         """Stop camera capture."""
-        with self._lock:
-            self.camera_active = False
-            self.detect_running = False
-            cap = self.cap
-            self.cap = None
+        self.camera_active = False
+        if self.camera:
+            self.camera.stop()
+            self.camera = None
+
+    def _display_loop(self):
+        """Display loop - updates UI with latest frame."""
+        PLACEHOLDER = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQq0AAAAAElFTkSuQmCC"
         
-        if cap:
-            cap.release()
-
-    def _capture_loop(self):
-        """Camera capture loop with configurable FPS."""
-        fps_target = self.app.settings.get("camera_fps", 15)
-        frame_interval = 1.0 / fps_target
-        clahe_enabled = self.app.settings.get("clahe_enabled", True)
-        
-        while True:
-            with self._lock:
-                if not self.camera_active:
-                    break
-                cap = self.cap
+        while self.camera_active and self.camera:
+            frame = self.camera.get_current_frame()
+            if frame is not None:
+                # Encode to base64 (minimal - only for display)
+                _, buf = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 70])
+                b64 = base64.b64encode(buf).decode()
+                self.image_display.src = f"data:image/jpeg;base64,{b64}"
+                self.image_display.visible = True
             
-            if cap is None or not cap.isOpened():
-                break
+            # Update FPS display
+            if self.camera:
+                fps = self.camera.get_fps()
+                hud_fps_text = self.hud_fps.data
+                if hud_fps_text:
+                    hud_fps_text.value = f"FPS: {fps}"
             
-            ret, frame = cap.read()
-            if not ret:
-                break
-
-            frame_start = time.time()
-            now = time.time()
-            self._frame_times.append(now)
-            fps = sum(1 for t in self._frame_times if now - t < 1.0)
-
-            display_frame = frame
-            if self.detect_running and self.app.current_engine:
-                try:
-                    proc_frame = frame.copy()
-                    if clahe_enabled:
-                        from core.vision import apply_clahe
-                        proc_frame = apply_clahe(proc_frame)
-                    
-                    conf = self.app.settings.get("conf", 0.25)
-                    iou = self.app.settings.get("iou", 0.45)
-                    t0 = time.time()
-                    results = self.app.current_engine.detect(proc_frame, conf_thresh=conf, iou_thresh=iou)
-                    latency = (time.time() - t0) * 1000
-                    
-                    from core.vision import draw_boxes
-                    from core.analytics import compute_stats
-                    display_frame = draw_boxes(frame, results)
-                    stats = compute_stats(results)
-                    
-                    self.detection_count += stats.get("total", 0)
-                    self.particle_count.value = str(self.detection_count)
-                    self.hud_latency.value = f"Latency: {latency:.0f}ms"
-                except Exception as e:
-                    print(f"[FieldTest] Detection error: {e}")
-
-            _, buf = cv2.imencode('.jpg', display_frame)
-            b64 = base64.b64encode(buf).decode()
-            self.image_display.src = f"data:image/jpeg;base64,{b64}"
-            self.image_display.visible = True
-            self.hud_fps.value = f"FPS: {fps}"
             self._safe_update()
+            time.sleep(0.033)  # ~30 FPS display refresh
 
-            elapsed = time.time() - frame_start
-            sleep_time = max(0, frame_interval - elapsed)
-            time.sleep(sleep_time)
+    def _process_frame(self, frame: np.ndarray):
+        """Process frame with ML inference (called from camera thread)."""
+        if not self._detect_running or self.app.current_engine is None:
+            return
+        
+        try:
+            clahe_enabled = self.app.settings.get("clahe_enabled", True)
+            if clahe_enabled:
+                from core.vision import apply_clahe
+                frame = apply_clahe(frame)
+            
+            conf = self.app.settings.get("conf", 0.25)
+            iou = self.app.settings.get("iou", 0.45)
+            
+            t0 = time.time()
+            results = self.app.current_engine.detect(frame, conf_thresh=conf, iou_thresh=iou)
+            latency = (time.time() - t0) * 1000
+            
+            # Update HUD
+            if self.camera:
+                self.hud_latency.data.value = f"Latency: {latency:.0f}ms"
+            
+            # Count particles
+            from core.analytics import compute_stats
+            stats = compute_stats(results)
+            self.detection_count += stats.get("total", 0)
+            self.hud_particles.data.value = str(self.detection_count)
+            
+        except Exception as e:
+            print(f"[FieldTest] Detection error: {e}")
 
     def capture_frame(self):
         """Capture a single frame for analysis."""
-        if not self.camera_active or self.cap is None:
+        if not self.camera_active or self.camera is None:
             return
         
-        ret, frame = self.cap.read()
-        if not ret:
+        frame = self.camera.get_current_frame()
+        if frame is None:
             return
         
-        # Save frame
         try:
             from core.data_models import ParticleDetection
             from core.vision import apply_clahe
@@ -405,7 +409,7 @@ class FieldTestScreen:
                     print(f"[FieldTest] Database error: {e}")
             
             self.detection_count += len(detections)
-            self.particle_count.value = str(self.detection_count)
+            self.hud_particles.data.value = str(self.detection_count)
             self._safe_update()
             self.app.show_snackbar(f"Captured: {len(detections)} particles")
         except Exception as e:
@@ -417,17 +421,19 @@ class FieldTestScreen:
             if self.app.current_engine is None:
                 self.app.show_snackbar("No model loaded")
                 return
-            self.detect_running = not self.detect_running
-            running = self.detect_running
+            self._detect_running = not self._detect_running
+            running = self._detect_running
         
         if running:
             self.detect_toggle.text = "Stop Detection"
             self.detect_toggle.icon = ft.Icons.STOP
-            self.detect_toggle.bgcolor = Colors.WARNING
+            self.detect_toggle.bgcolor = ft.Colors.with_opacity(0.15, Colors.WARNING)
+            self.detect_toggle.color = Colors.WARNING
         else:
             self.detect_toggle.text = "Auto-Detect"
             self.detect_toggle.icon = ft.Icons.AUTO_FIX_HIGH
-            self.detect_toggle.bgcolor = Colors.GLASS_BG
+            self.detect_toggle.bgcolor = ft.Colors.with_opacity(0.15, Colors.ACCENT_CYAN)
+            self.detect_toggle.color = Colors.ACCENT_CYAN
         self._safe_update()
 
     def cleanup(self):
