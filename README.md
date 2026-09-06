@@ -1,48 +1,65 @@
 # MP-Detect: Microplastic Detection & Quantification GUI
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)[cite: 1]
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)[cite: 1]
-[![ONNX Runtime](https://img.shields.io/badge/Inference-ONNX%20Runtime-green.svg)](https://onnxruntime.ai/)[cite: 1]
-[![Kivy Framework](https://img.shields.io/badge/GUI-Kivy-orange.svg)](https://kivy.org/)[cite: 1]
+[![Tests](https://github.com/MP-DETECT-CODE/Mp-Detect/actions/workflows/test.yml/badge.svg)](https://github.com/MP-DETECT-CODE/Mp-Detect/actions/workflows/test.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![ONNX Runtime](https://img.shields.io/badge/Inference-ONNX%20Runtime-green.svg)](https://onnxruntime.ai/)
+[![Kivy Framework](https://img.shields.io/badge/GUI-Kivy-orange.svg)](https://kivy.org/)
 
-**MP-Detect** is an interactive desktop computer vision application designed to automate the detection, localization, and quantification of microplastic particles from images and video streams[cite: 1]. Built using the **Kivy** cross-platform framework and powered by **ONNX Runtime**, it provides real-time, high-accuracy inference across varied lighting conditions—including standard optical illumination and UV fluorescence imaging[cite: 1].
+**MP-Detect** is an interactive desktop computer vision application designed to automate the detection, localization, and quantification of microplastic particles from images and video streams. Built using the **Kivy** cross-platform framework and powered by **ONNX Runtime**, it provides real-time, high-accuracy inference across varied lighting conditions—including standard optical illumination and UV fluorescence imaging.
 
 ---
 
 ## Key Features
 
-- **Cross-Platform Interactive GUI**: Modern, touch-ready desktop interface built with Kivy and declarative KV styling (`ui.kv`)[cite: 1].
-- **High-Performance Inference**: Accelerated execution powered by `ONNX Runtime` (`best.onnx`), optimizing CPU/GPU throughput without heavy PyTorch dependencies in deployment[cite: 1].
-- **Multi-Modal Illumination Support**: Evaluated and calibrated for both **Bright Light Optical Filtering (BLOF)** and **Ultraviolet (UV)** fluorescence imaging environments[cite: 1].
-- **Batch Image & Video Processing**: Supports static microscope captures as well as continuous stream analysis (`.mp4`, `.avi`) with annotated frame rendering[cite: 1].
-- **Configurable Detection Parameters**: Fine-tune confidence thresholds, Non-Maximum Suppression (NMS) IoU thresholds, input tensor sizing, and camera indices via `config.json`[cite: 1].
-- **Export & Analytics**: Output automated particle counts, bounding-box coordinate maps, and annotated detection media directly to disk[cite: 1].
+- **Cross-Platform Interactive GUI**: Modern, touch-ready desktop interface built with Kivy and declarative KV styling (`mpdetect.kv`).
+- **High-Performance Inference**: Accelerated execution powered by `ONNX Runtime` (`best.onnx`), optimizing CPU/GPU throughput without heavy PyTorch dependencies in deployment.
+- **Multi-Modal Illumination Support**: Evaluated and calibrated for both **Bright Light Optical Filtering (BLOF)** and **Ultraviolet (UV)** fluorescence imaging environments.
+- **Batch Image & Video Processing**: Supports static microscope captures as well as continuous stream analysis (`.mp4`, `.avi`) with annotated frame rendering.
+- **Configurable Detection Parameters**: Fine-tune confidence thresholds, Non-Maximum Suppression (NMS) IoU thresholds, input tensor sizing, and camera indices via `config.json`.
+- **Export & Analytics**: Output automated particle counts, bounding-box coordinate maps, and annotated detection media directly to disk.
 
 ---
 
 ## Repository Structure
 
 ```text
-MPDetect-GUI/
-├── assets/
-│   └── app_icon.png              # Application logo and window branding
+Mp-Detect/
+├── assets/                          # App icons and presplash images
 ├── models/
-│   └── best.onnx                 # Pretrained microplastic detection weights
+│   ├── best.onnx                    # Pretrained microplastic detection weights
+│   └── model_registry.json          # Model registry (auto-managed)
 ├── utils/
 │   ├── __init__.py
-│   ├── detector.py               # ONNX tensor pre/post-processing & NMS logic
-│   ├── file_handler.py           # IO utilities for images, videos, and logging
-│   ├── permissions.py            # OS-level camera & storage permission handlers
-│   └── settings_manager.py       # Configuration parser for runtime adjustments
+│   ├── controllers.py               # Inference, Upload, and Export controller mixins
+│   ├── detector.py                  # Legacy ONNX tensor pre/post-processing & NMS
+│   ├── file_dialog.py               # Shared tkinter/zenity file dialog
+│   ├── file_handler.py              # IO utilities for images, videos, and logging
+│   ├── inference_engine.py          # ONNX/TFLite inference backends
+│   ├── media_dispatcher.py          # System file sharing
+│   ├── model_manager.py             # Model registry, validation, and switching
+│   ├── permissions.py               # OS-level camera & storage permission handlers
+│   ├── settings_manager.py          # Configuration parser for runtime adjustments
+│   └── vision.py                    # Shared vision utilities (letterbox, NMS, IoU)
+├── tests/
+│   ├── test_controllers.py          # Tests for controller logic
+│   ├── test_file_dialog.py          # Tests for file dialog (mocked)
+│   ├── test_file_handler.py         # Tests for file handler
+│   ├── test_inference_engine.py     # Tests for ONNX/TFLite backends
+│   ├── test_settings_manager.py     # Tests for config persistence
+│   └── test_vision.py               # Tests for letterbox, NMS, IoU
 ├── MP Detect/
-│   ├── Results/                  # Sample detection outputs and processed videos
-│   └── Unseen Data/              # Test datasets (BLOF & UV test images/videos)
-├── config.json                   # User settings & detection thresholds
-├── main.py                       # Application lifecycle & event controller
-├── ui.kv                         # Kivy layout architecture & visual styling
-├── requirements.txt              # Production dependencies
+│   ├── Results/                     # Sample detection outputs
+│   └── Unseen Data/                 # Test datasets
+├── .github/workflows/test.yml       # CI/CD: GitHub Actions test workflow
+├── buildozer.spec                   # Android build config
+├── pyinstaller.spec                 # Desktop build config
+├── config.example.json              # Default configuration template
+├── main.py                          # Application entry point
+├── mpdetect.kv                      # Kivy layout & visual styling
+├── requirements.txt                 # Python dependencies
 └── README.md
-```[cite: 1]
+```
 
 ---
 
@@ -50,9 +67,9 @@ MPDetect-GUI/
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/Joal0816/Mp-Detect.git](https://github.com/Joal0816/Mp-Detect.git)
+git clone https://github.com/MP-DETECT-CODE/Mp-Detect.git
 cd Mp-Detect
-```[cite: 1]
+```
 
 ### 2. Create and Activate a Virtual Environment
 ```bash
@@ -63,86 +80,110 @@ source venv/bin/activate
 # Windows
 python -m venv venv
 venv\Scripts\activate
-```[cite: 1]
+```
 
 ### 3. Install Dependencies
 ```bash
 pip install --upgrade pip
 pip install -r requirements.txt
-```[cite: 1]
+```
 
-> **Note (Linux users):** Kivy relies on system-level OpenGL libraries[cite: 1]. On Debian/Ubuntu systems, make sure to install[cite: 1]:
+> **Note (Linux users):** Kivy relies on system-level OpenGL libraries. On Debian/Ubuntu systems, make sure to install:
 > ```bash
 > sudo apt install libgl1-mesa-dev libgles2-mesa-dev
-> ```[cite: 1]
+> ```
 
 ---
 
 ## Usage
 
 ### Launching the Application
-Execute the primary entry script[cite: 1]:
 ```bash
 python main.py
-```[cite: 1]
+```
 
 ### Workflow
-1. **Load Media**: Select an individual micrograph image or load a recorded video file (`.mp4`) using the file browser[cite: 1].
-2. **Adjust Thresholds**: Access the settings panel to tune the **Confidence Threshold** (e.g., `0.35` - `0.60`) and **NMS IoU Threshold**[cite: 1].
-3. **Execute Detection**: Click **Detect** to run inference across frames[cite: 1]. Microplastics will be outlined with class tags and individual confidence scores[cite: 1].
-4. **Inspect & Export**: Review total particle count summaries and save annotated media or CSV logs to the designated results folder[cite: 1].
+1. **Load Media**: Select an individual micrograph image or load a recorded video file (`.mp4`) using the file browser.
+2. **Adjust Thresholds**: Access the settings panel to tune the **Confidence Threshold** (e.g., `0.25` - `0.60`) and **NMS IoU Threshold**.
+3. **Execute Detection**: Click **Detect** to run inference across frames. Microplastics will be outlined with class tags and individual confidence scores.
+4. **Inspect & Export**: Review total particle count summaries and save annotated media or CSV logs to the designated results folder.
 
 ---
 
-## Configuration (`config.json`)
+## Running Tests
 
-Runtime behavioral properties can be modified through the in-app settings panel or directly within `config.json`[cite: 1]:
+```bash
+pip install pytest
+pytest tests/ -v
+```
+
+The test suite covers:
+- **Vision utilities** (`test_vision.py`): letterbox, IoU, NMS, coordinate conversion
+- **File dialog** (`test_file_dialog.py`): tkinter/zenity fallback (fully mocked)
+- **File handler** (`test_file_handler.py`): path generation, file listing
+- **Settings manager** (`test_settings_manager.py`): config load/save/reset
+- **Inference engine** (`test_inference_engine.py`): ONNX/TFLite backends
+- **Controllers** (`test_controllers.py`): morphology, analytics, CSV export
+
+---
+
+## Configuration
+
+Runtime behavioral properties can be modified through the in-app settings panel or directly within `config.json`:
 
 ```json
 {
-  "confidence_threshold": 0.45,
-  "nms_iou_threshold": 0.50,
-  "input_size": [640, 640],
-  "model_path": "models/best.onnx",
-  "save_annotated_results": true,
-  "output_directory": "MP Detect/Results"
+  "conf": 0.25,
+  "iou": 0.45,
+  "imgsz": 640,
+  "lighting_mode": "blof",
+  "active_model_path": "models/best.onnx",
+  "active_model_id": "default_onnx",
+  "hardware_provider": "auto",
+  "scale_factor": 0.0,
+  "show_overlay": true,
+  "show_scale_bar": true
 }
-```[cite: 1]
+```
+
+See `config.example.json` for the full default configuration.
 
 ---
 
 ## Detection Capabilities & Performance
 
-The model handles diverse particulate morphologies and illumination contexts[cite: 1]:
+The model handles diverse particulate morphologies and illumination contexts:
 
 | Lighting Setup | Evaluation Focus | Typical Challenge Handled |
 | :--- | :--- | :--- |
 | **BLOF (Bright-Light Optical)** | High-contrast particulate morphology | Shadowing, translucent polymers, sediment noise |
-| **UV Fluorescence** | Fluorescent emission response | Uneven fluorescence intensities, overlapping fragments |[cite: 1]
+| **UV Fluorescence** | Fluorescent emission response | Uneven fluorescence intensities, overlapping fragments |
 
 ---
 
 ## Dependencies
 
-- **Python 3.10+**[cite: 1]
-- **Kivy**: Desktop GUI interface & event management[cite: 1]
-- **ONNX Runtime**: Lightweight neural network execution engine[cite: 1]
-- **OpenCV (`opencv-python`)**: Video streaming, color conversions, and image rendering[cite: 1]
-- **NumPy**: Matrix preprocessing, tensor reshaping, and vector math[cite: 1]
+- **Python 3.10+**
+- **Kivy**: Desktop GUI interface & event management
+- **KivyMD**: Material Design components for Kivy
+- **ONNX Runtime**: Lightweight neural network execution engine
+- **OpenCV (`opencv-python-headless`)**: Video streaming, color conversions, and image rendering
+- **NumPy**: Matrix preprocessing, tensor reshaping, and vector math
+- **Pillow**: Image processing utilities
 
 ---
 
 ## Contributing
 
-Contributions, bug reports, and enhancements are welcome[cite: 1]:
-1. Fork the repository[cite: 1].
-2. Create your feature branch (`git checkout -b feature/Optimization`)[cite: 1].
-3. Commit your modifications (`git commit -m "Add optimized bounding box post-processing"`)[cite: 1].
-4. Push to your branch (`git push origin feature/Optimization`)[cite: 1].
-5. Open a Pull Request[cite: 1].
+Contributions, bug reports, and enhancements are welcome:
+1. Fork the repository.
+2. Create your feature branch (`git checkout -b feature/Optimization`).
+3. Commit your modifications (`git commit -m "Add optimized bounding box post-processing"`).
+4. Push to your branch (`git push origin feature/Optimization`).
+5. Open a Pull Request.
 
 ---
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE)[cite: 1].
+This project is licensed under the [MIT License](LICENSE).

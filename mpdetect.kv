@@ -1,0 +1,1609 @@
+#:import dp kivy.metrics.dp
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PHASE 1A: DESIGN SYSTEM - Color Palette & Typography Constants
+# ══════════════════════════════════════════════════════════════════════════════
+# Dark theme optimized for microscopy inspection and UV fluorescence imaging.
+
+#:set COLOR_BG_PRIMARY (0.0588, 0.0588, 0.0588, 1)          # #0F0F0F - Near black (reduces eye strain)
+#:set COLOR_BG_SURFACE (0.1020, 0.1020, 0.1020, 1)          # #1A1A1A - Surface lift for cards
+#:set COLOR_BG_PANEL (0.1255, 0.1255, 0.1255, 1)            # #202020 - Panel background
+
+#:set COLOR_ACCENT_PRIMARY (0, 0.8863, 1, 1)                # #00E3FF - Cyan (primary accent, good for UV)
+#:set COLOR_ACCENT_SECONDARY (0.4627, 1, 0.0118, 1)         # #76FF00 - Lime-green (bounding boxes)
+#:set COLOR_ACCENT_WARN (1, 0.2, 0.2, 1)                    # #FF3333 - Red alert
+
+#:set COLOR_TEXT_PRIMARY (1, 1, 1, 1)                       # #FFFFFF - White (high contrast)
+#:set COLOR_TEXT_SECONDARY (0.6902, 0.6902, 0.6902, 1)      # #B0B0B0 - Muted gray
+#:set COLOR_TEXT_TERTIARY (0.4, 0.4, 0.4, 1)                # #666666 - Dark gray
+
+#:set COLOR_BORDER_SUBTLE (0.2, 0.2, 0.2, 1)                # #333333 - Subtle dividers
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Reusable Component Definitions (1B: Component Styling Rules)
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Threshold Slider Control: Slider + numeric input combo
+<ThresholdSliderControl@MDBoxLayout>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(48)
+    spacing: dp(8)
+    padding: dp(4)
+    slider_value: 0.5
+    slider_max: 1.0
+    slider_min: 0.0
+    label_text: "Threshold"
+    numeric_text: "0.50"
+    callback: None
+
+    MDLabel:
+        id: label
+        text: root.label_text
+        role: "small"
+        text_color: COLOR_TEXT_SECONDARY
+        size_hint_x: 0.3
+
+    MDSlider:
+        id: slider
+        min: root.slider_min
+        max: root.slider_max
+        value: root.slider_value
+        size_hint_x: 0.5
+        color: COLOR_ACCENT_PRIMARY
+        on_value: root.numeric_text = f"{self.value:.2f}"
+        on_value: root.callback(self, self.value) if root.callback else None
+
+    MDTextField:
+        id: numeric_input
+        text: root.numeric_text
+        mode: "outlined"
+        size_hint_x: 0.2
+        height: dp(36)
+        input_filter: "float"
+        multiline: False
+        on_text_validate: slider.value = float(self.text) if self.text else 0.5
+
+
+# Particle Count Badge: Large metric display card
+<ParticleCountBadge@MDCard>:
+    orientation: "vertical"
+    size_hint: None, None
+    size: dp(140), dp(100)
+    padding: dp(12)
+    spacing: dp(8)
+    elevation: 2
+    md_bg_color: COLOR_BG_SURFACE
+    radius: [dp(8)]
+
+    MDLabel:
+        id: value_label
+        text: "0"
+        role: "large"
+        theme_text_color: "Custom"
+        text_color: COLOR_ACCENT_PRIMARY
+        bold: True
+        halign: "center"
+        size_hint_y: 0.6
+
+    MDLabel:
+        id: title_label
+        text: "Total"
+        role: "small"
+        theme_text_color: "Custom"
+        text_color: COLOR_TEXT_SECONDARY
+        halign: "center"
+        size_hint_y: 0.4
+
+
+# Metric Item: Key-value pair for data readouts
+<MetricItem@MDBoxLayout>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(24)
+    spacing: dp(8)
+    metric_text: "Metric"
+    value_text: "0.00"
+
+    MDLabel:
+        id: metric_label
+        text: root.metric_text
+        role: "small"
+        text_color: COLOR_TEXT_SECONDARY
+        size_hint_x: 0.6
+
+    MDLabel:
+        id: metric_value
+        text: root.value_text
+        role: "small"
+        font_name: "RobotoMono"
+        text_color: COLOR_TEXT_PRIMARY
+        halign: "right"
+        size_hint_x: 0.4
+
+
+# Overlay Toggle Button: Checkbox with label
+<OverlayToggleButton@MDBoxLayout>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(32)
+    spacing: dp(8)
+    padding: dp(4, 0)
+
+    MDCheckbox:
+        id: toggle
+        active: True
+        size_hint_x: 0.1
+
+    MDLabel:
+        id: toggle_label
+        text: "Show Overlay"
+        role: "small"
+        text_color: COLOR_TEXT_PRIMARY
+        size_hint_x: 0.9
+
+
+# Progress Indicator: For long-running tasks
+<ProgressIndicator@MDBoxLayout>:
+    orientation: "vertical"
+    size_hint_y: None
+    height: dp(60)
+    padding: dp(8)
+    spacing: dp(4)
+    md_bg_color: (0, 0, 0, 0.5)
+    radius: [dp(6)]
+
+    MDLabel:
+        id: progress_text
+        text: "Processing..."
+        role: "small"
+        text_color: COLOR_ACCENT_PRIMARY
+        halign: "center"
+
+    MDLinearProgressIndicator:
+        id: progress_bar
+        value: 0
+        max: 100
+        height: dp(3)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Screen Definitions (Updated with Design System Colors)
+# ══════════════════════════════════════════════════════════════════════════════
+
+<MDScreenManager>:
+    md_bg_color: COLOR_BG_PRIMARY
+
+
+# ── InferenceScreen ───────────────────────────────────────────────
+<InferenceScreen>:
+    MDBoxLayout:
+        orientation: "horizontal"
+        spacing: dp(4)
+        padding: dp(4)
+
+        # === LEFT PANEL: Collapsible Sidebar ===
+        MDBoxLayout:
+            id: left_sidebar
+            orientation: "vertical"
+            size_hint: None, 1
+            width: dp(220)
+            spacing: dp(4)
+            padding: dp(4)
+            md_bg_color: COLOR_BG_PRIMARY
+            radius: [dp(8)]
+
+            # Media Source Selection
+            MDCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(90)
+                padding: dp(8)
+                spacing: dp(6)
+                md_bg_color: COLOR_BG_SURFACE
+                radius: [dp(6)]
+
+                MDLabel:
+                    text: "Media Source"
+                    role: "medium"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(20)
+
+                MDBoxLayout:
+                    id: source_group
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: dp(52)
+                    spacing: dp(6)
+
+                    MDButton:
+                        id: btn_source_file
+                        style: "outlined"
+                        size_hint_x: 0.5
+                        on_release: app.open_file_manager()
+                        MDButtonText:
+                            text: "\U0001f4c1 Open File"
+                            font_size: "12sp"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: (0.878, 0.878, 0.878, 1)
+
+                    MDButton:
+                        id: btn_source_camera
+                        style: "filled"
+                        size_hint_x: 0.5
+                        md_bg_color: COLOR_ACCENT_PRIMARY
+                        on_release: app.on_source_change(self, "camera")
+                        MDButtonText:
+                            text: "\U0001f4f7 Live Camera"
+                            font_size: "12sp"
+                            bold: True
+                            theme_text_color: "Custom"
+                            text_color: (0.075, 0.075, 0.075, 1)
+
+            # Lighting Presets
+            MDCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(130)
+                padding: dp(8)
+                md_bg_color: COLOR_BG_SURFACE
+                radius: [dp(6)]
+
+                MDLabel:
+                    text: "Lighting Presets"
+                    role: "medium"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(24)
+
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(4)
+                    size_hint_y: None
+                    height: dp(96)
+
+                    MDButton:
+                        style: "filled"
+                        size_hint_y: None
+                        height: dp(28)
+                        on_release: app.set_lighting_preset("blof")
+                        MDButtonText:
+                            text: "BLOF"
+                            font_size: "13sp"
+                            bold: True
+                            halign: "center"
+                            theme_text_color: "Custom"
+                            text_color: COLOR_BG_PRIMARY
+
+                    MDButton:
+                        style: "filled"
+                        size_hint_y: None
+                        height: dp(28)
+                        on_release: app.set_lighting_preset("uv_365")
+                        MDButtonText:
+                            text: "UV 365nm"
+                            font_size: "13sp"
+                            bold: True
+                            halign: "center"
+                            theme_text_color: "Custom"
+                            text_color: COLOR_BG_PRIMARY
+
+                    MDButton:
+                        style: "filled"
+                        size_hint_y: None
+                        height: dp(28)
+                        on_release: app.set_lighting_preset("uv_395")
+                        MDButtonText:
+                            text: "UV 395nm"
+                            font_size: "13sp"
+                            bold: True
+                            halign: "center"
+                            theme_text_color: "Custom"
+                            text_color: COLOR_BG_PRIMARY
+
+        # === CENTER PANEL: Scientific Canvas ===
+        MDBoxLayout:
+            orientation: "vertical"
+            size_hint: 1, 1
+            spacing: dp(4)
+            padding: dp(4)
+
+            MDTopAppBar:
+                id: inf_toolbar
+                title: "Inference"
+                left_action_items: [["arrow-left", lambda *_: app.go("models", "right")]]
+                right_action_items: [["upload", lambda *_: app.go("upload", "left")]]
+
+            # Image area with zoom/pan (Scatter)
+            ScrollView:
+                do_scroll_x: False
+                do_scroll_y: True
+
+                MDBoxLayout:
+                    orientation: "vertical"
+                    spacing: dp(4)
+                    padding: dp(4)
+                    size_hint_y: None
+                    height: self.minimum_height
+
+                    MDFloatLayout:
+                        # Zoom/pan enabled image
+                        Scatter:
+                            do_rotate: False
+                            do_zoom: True
+                            do_scale: True
+                            mindist: 0.01
+                            maxdist: 20
+                            angle: 0
+                            size_hint: 1, 1
+
+                            Image:
+                                id: raw_image
+                                source: ""
+                                size_hint: 1, 1
+
+                        # Placeholder shown when no media is loaded
+                        MDCard:
+                            id: viewport_placeholder
+                            orientation: "vertical"
+                            spacing: dp(12)
+                            padding: dp(24)
+                            size_hint: None, None
+                            size: dp(340), dp(180)
+                            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                            md_bg_color: COLOR_BG_SURFACE
+                            radius: [dp(12)]
+                            elevation: 1
+
+                            MDIcon:
+                                icon: "microscope"
+                                theme_text_color: "Custom"
+                                text_color: COLOR_TEXT_TERTIARY
+                                font_size: "56sp"
+                                halign: "center"
+                                size_hint_y: 0.4
+
+                            MDLabel:
+                                text: "No Micrograph Loaded"
+                                theme_text_color: "Custom"
+                                text_color: (0.878, 0.878, 0.878, 1)
+                                halign: "center"
+                                bold: True
+                                font_size: "16sp"
+                                size_hint_y: 0.3
+
+                            MDLabel:
+                                text: "Click 'Open File' or press Ctrl+O"
+                                theme_text_color: "Custom"
+                                text_color: (0.533, 0.533, 0.533, 1)
+                                halign: "center"
+                                font_size: "12sp"
+                                size_hint_y: 0.3
+
+            # HUD row
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(32)
+                spacing: dp(8)
+
+                MDLabel:
+                    text: "FPS: --"
+                    id: hud_fps
+                    theme_text_color: "Custom"
+                    text_color: COLOR_ACCENT_PRIMARY
+
+                MDLabel:
+                    text: "Latency: --ms"
+                    id: hud_latency
+                    theme_text_color: "Custom"
+                    text_color: COLOR_ACCENT_PRIMARY
+
+                MDLabel:
+                    id: hud_backend
+                    text: ""
+                    theme_text_color: "Custom"
+                    text_color: COLOR_ACCENT_SECONDARY
+                    size_hint_x: 0.4
+                    halign: "right"
+
+            # Toolbar below image
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(48)
+                spacing: dp(6)
+                padding: dp(6)
+                md_bg_color: COLOR_BG_PANEL
+                radius: [dp(6)]
+
+                MDButton:
+                    style: "filled"
+                    size_hint_x: 0.35
+                    md_bg_color: COLOR_ACCENT_PRIMARY
+                    on_release: app.toggle_inference()
+                    MDButtonText:
+                        text: "Detect"
+                        font_size: "13sp"
+                        bold: True
+                        theme_text_color: "Custom"
+                        text_color: COLOR_BG_PRIMARY
+
+                MDButton:
+                    style: "outlined"
+                    size_hint_x: 0.25
+                    on_release: app.inference_take_snapshot()
+                    MDButtonText:
+                        text: "Snapshot"
+                        font_size: "12sp"
+
+                MDButton:
+                    style: "outlined"
+                    size_hint_x: 0.25
+                    on_release: app.inference_toggle_recording()
+                    MDButtonText:
+                        text: "Record"
+                        font_size: "12sp"
+
+                MDButton:
+                    style: "outlined"
+                    size_hint_x: 0.15
+                    on_release: app.go("models", "left")
+                    MDButtonText:
+                        text: "Engine"
+                        font_size: "12sp"
+
+        # === RIGHT PANEL: Inspector ===
+        MDBoxLayout:
+            id: right_inspector
+            orientation: "vertical"
+            size_hint: None, 1
+            width: dp(280)
+            spacing: dp(4)
+            padding: dp(4)
+            md_bg_color: COLOR_BG_PRIMARY
+            radius: [dp(8)]
+
+            # Threshold Control
+            MDCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(200)
+                padding: dp(10)
+                spacing: dp(4)
+                md_bg_color: COLOR_BG_SURFACE
+                radius: [dp(6)]
+                line_color: COLOR_BORDER_SUBTLE
+                line_width: dp(0.5)
+
+                MDLabel:
+                    text: "Detection Thresholds"
+                    role: "medium"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(24)
+                    bold: True
+
+                MDLabel:
+                    text: "Confidence"
+                    role: "small"
+                    text_color: COLOR_TEXT_SECONDARY
+                    size_hint_y: None
+                    height: dp(16)
+
+                ThresholdSliderControl:
+                    id: threshold_slider
+                    callback: app.on_threshold_change
+
+                MDLabel:
+                    text: "IoU"
+                    role: "small"
+                    text_color: COLOR_TEXT_SECONDARY
+                    size_hint_y: None
+                    height: dp(16)
+
+                ThresholdSliderControl:
+                    id: iou_slider
+                    slider_value: 0.45
+                    numeric_text: "0.45"
+                    label_text: "IoU"
+                    callback: app.on_iou_threshold_change
+
+            # Particle Counts
+            MDCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(180)
+                padding: dp(10)
+                spacing: dp(4)
+                md_bg_color: COLOR_BG_SURFACE
+                radius: [dp(6)]
+                line_color: COLOR_BORDER_SUBTLE
+                line_width: dp(0.5)
+
+                MDLabel:
+                    text: "Particle Counts"
+                    role: "medium"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(24)
+                    bold: True
+
+                ParticleCountBadge:
+                    id: particle_count_badge
+                    text: "0"
+
+            # Metrics Summary
+            MDCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(120)
+                padding: dp(10)
+                spacing: dp(2)
+                md_bg_color: COLOR_BG_SURFACE
+                radius: [dp(6)]
+                line_color: COLOR_BORDER_SUBTLE
+                line_width: dp(0.5)
+
+                MDLabel:
+                    text: "Metrics"
+                    role: "medium"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(24)
+                    bold: True
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: dp(32)
+                    spacing: dp(8)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(8)
+
+                        MDLabel:
+                            text: "Total"
+                            role: "small"
+                            text_color: COLOR_TEXT_SECONDARY
+                            size_hint_x: 0.6
+
+                        MDLabel:
+                            id: total_value
+                            text: "0"
+                            role: "small"
+                            font_name: "RobotoMono"
+                            text_color: COLOR_TEXT_PRIMARY
+                            halign: "right"
+                            size_hint_x: 0.4
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(8)
+
+                        MDLabel:
+                            text: "Avg Conf"
+                            role: "small"
+                            text_color: COLOR_TEXT_SECONDARY
+                            size_hint_x: 0.6
+
+                        MDLabel:
+                            id: avg_value
+                            text: "0.00"
+                            role: "small"
+                            font_name: "RobotoMono"
+                            text_color: COLOR_TEXT_PRIMARY
+                            halign: "right"
+                            size_hint_x: 0.4
+
+                # Class count rows
+                MDBoxLayout:
+                    orientation: "vertical"
+                    size_hint_y: None
+                    height: dp(64)
+                    spacing: dp(2)
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(4)
+
+                        MDLabel:
+                            text: "PET"
+                            role: "small"
+                            text_color: COLOR_TEXT_SECONDARY
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(24)
+                            spacing: dp(8)
+
+                            MDLabel:
+                                text: "Count"
+                                role: "small"
+                                text_color: COLOR_TEXT_SECONDARY
+                                size_hint_x: 0.6
+
+                            MDLabel:
+                                id: pet_count_value
+                                text: "0"
+                                role: "small"
+                                font_name: "RobotoMono"
+                                text_color: COLOR_TEXT_PRIMARY
+                                halign: "right"
+                                size_hint_x: 0.4
+
+                        MDLabel:
+                            text: "HDPE"
+                            role: "small"
+                            text_color: COLOR_TEXT_SECONDARY
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(24)
+                            spacing: dp(8)
+
+                            MDLabel:
+                                text: "Count"
+                                role: "small"
+                                text_color: COLOR_TEXT_SECONDARY
+                                size_hint_x: 0.6
+
+                            MDLabel:
+                                id: hdpe_count_value
+                                text: "0"
+                                role: "small"
+                                font_name: "RobotoMono"
+                                text_color: COLOR_TEXT_PRIMARY
+                                halign: "right"
+                                size_hint_x: 0.4
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(4)
+
+                        MDLabel:
+                            text: "PVC"
+                            role: "small"
+                            text_color: COLOR_TEXT_SECONDARY
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(24)
+                            spacing: dp(8)
+
+                            MDLabel:
+                                text: "Count"
+                                role: "small"
+                                text_color: COLOR_TEXT_SECONDARY
+                                size_hint_x: 0.6
+
+                            MDLabel:
+                                id: pvc_count_value
+                                text: "0"
+                                role: "small"
+                                font_name: "RobotoMono"
+                                text_color: COLOR_TEXT_PRIMARY
+                                halign: "right"
+                                size_hint_x: 0.4
+
+                        MDLabel:
+                            text: "LDPE"
+                            role: "small"
+                            text_color: COLOR_TEXT_SECONDARY
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(24)
+                            spacing: dp(8)
+
+                            MDLabel:
+                                text: "Count"
+                                role: "small"
+                                text_color: COLOR_TEXT_SECONDARY
+                                size_hint_x: 0.6
+
+                            MDLabel:
+                                id: ldpe_count_value
+                                text: "0"
+                                role: "small"
+                                font_name: "RobotoMono"
+                                text_color: COLOR_TEXT_PRIMARY
+                                halign: "right"
+                                size_hint_x: 0.4
+
+                    MDBoxLayout:
+                        orientation: "horizontal"
+                        size_hint_y: None
+                        height: dp(24)
+                        spacing: dp(4)
+
+                        MDLabel:
+                            text: "PP"
+                            role: "small"
+                            text_color: COLOR_TEXT_SECONDARY
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(24)
+                            spacing: dp(8)
+
+                            MDLabel:
+                                text: "Count"
+                                role: "small"
+                                text_color: COLOR_TEXT_SECONDARY
+                                size_hint_x: 0.6
+
+                            MDLabel:
+                                id: pp_count_value
+                                text: "0"
+                                role: "small"
+                                font_name: "RobotoMono"
+                                text_color: COLOR_TEXT_PRIMARY
+                                halign: "right"
+                                size_hint_x: 0.4
+
+                        MDLabel:
+                            text: "PS"
+                            role: "small"
+                            text_color: COLOR_TEXT_SECONDARY
+                        MDBoxLayout:
+                            orientation: "horizontal"
+                            size_hint_y: None
+                            height: dp(24)
+                            spacing: dp(8)
+
+                            MDLabel:
+                                text: "Count"
+                                role: "small"
+                                text_color: COLOR_TEXT_SECONDARY
+                                size_hint_x: 0.6
+
+                            MDLabel:
+                                id: ps_count_value
+                                text: "0"
+                                role: "small"
+                                font_name: "RobotoMono"
+                                text_color: COLOR_TEXT_PRIMARY
+                                halign: "right"
+                                size_hint_x: 0.4
+
+            # Phase 5: Analytics / Diagnostics Panel
+            MDCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(260)
+                padding: dp(10)
+                spacing: dp(2)
+                md_bg_color: COLOR_BG_SURFACE
+                radius: [dp(6)]
+                line_color: COLOR_BORDER_SUBTLE
+                line_width: dp(0.5)
+
+                MDLabel:
+                    text: "Analytics"
+                    role: "medium"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(24)
+                    bold: True
+
+                MDLabel:
+                    id: ug_illumination_tag
+                    text: app.ug_illumination_tag
+                    role: "small"
+                    text_color: COLOR_ACCENT_SECONDARY
+                    size_hint_y: None
+                    height: dp(16)
+
+                MDLabel:
+                    text: app.ug_analytics_text
+                    role: "small"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(72)
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: dp(20)
+                    spacing: dp(4)
+                    MDLabel:
+                        text: "Mean AR:"
+                        role: "small"
+                        text_color: COLOR_TEXT_SECONDARY
+                        size_hint_x: 0.5
+                    MDLabel:
+                        text: f"{app.ug_mean_ar:.2f}"
+                        role: "small"
+                        font_name: "RobotoMono"
+                        text_color: COLOR_TEXT_PRIMARY
+                        size_hint_x: 0.5
+
+                MDLabel:
+                    text: app.ug_size_um_text
+                    role: "small"
+                    text_color: COLOR_ACCENT_PRIMARY
+                    size_hint_y: None
+                    height: dp(16) if app.ug_size_um_text else dp(0)
+                    opacity: 1 if app.ug_size_um_text else 0
+
+            # Phase 5: Size Distribution Chart
+            MDCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(120)
+                padding: dp(10)
+                spacing: dp(2)
+                md_bg_color: COLOR_BG_SURFACE
+                radius: [dp(6)]
+                line_color: COLOR_BORDER_SUBTLE
+                line_width: dp(0.5)
+
+                MDLabel:
+                    text: "Size Distribution"
+                    role: "medium"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(20)
+                    bold: True
+
+                DistributionBarChart:
+                    id: size_chart
+                    values: app.ug_size_counts
+                    labels: ["<2.5k", "2.5-10k", "10-40k", ">40k"]
+                    bar_colors: [COLOR_ACCENT_PRIMARY, (0, 0.7, 0.9, 1), (0, 0.5, 0.8, 1), (0, 0.3, 0.7, 1)]
+
+            # Phase 5: Morphology Distribution Chart
+            MDCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(120)
+                padding: dp(10)
+                spacing: dp(2)
+                md_bg_color: COLOR_BG_SURFACE
+                radius: [dp(6)]
+                line_color: COLOR_BORDER_SUBTLE
+                line_width: dp(0.5)
+
+                MDLabel:
+                    text: "Morphology"
+                    role: "medium"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(20)
+                    bold: True
+
+                DistributionBarChart:
+                    id: morph_chart
+                    values: app.ug_morph_counts
+                    labels: ["Fragment", "Film", "Pellet", "Fiber"]
+                    bar_colors: [COLOR_ACCENT_SECONDARY, (0.2, 0.8, 0.4, 1), (0.9, 0.8, 0, 1), (1, 0.4, 0, 1)]
+
+            # Phase 8: Calibration Card
+            MDCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(120)
+                padding: dp(10)
+                spacing: dp(4)
+                md_bg_color: COLOR_BG_SURFACE
+                radius: [dp(6)]
+                line_color: COLOR_BORDER_SUBTLE
+                line_width: dp(0.5)
+
+                MDLabel:
+                    text: "Calibration"
+                    role: "medium"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(20)
+
+                GridLayout:
+                    cols: 4
+                    size_hint_y: None
+                    height: dp(36)
+                    spacing: dp(4)
+
+                    MDButton:
+                        style: "outlined"
+                        size_hint_x: 1
+                        on_release: app.set_magnification("4x")
+                        MDButtonText:
+                            text: "4x"
+                            font_size: "11sp"
+                            bold: True
+
+                    MDButton:
+                        style: "outlined"
+                        size_hint_x: 1
+                        on_release: app.set_magnification("10x")
+                        MDButtonText:
+                            text: "10x"
+                            font_size: "11sp"
+                            bold: True
+
+                    MDButton:
+                        style: "outlined"
+                        size_hint_x: 1
+                        on_release: app.set_magnification("40x")
+                        MDButtonText:
+                            text: "40x"
+                            font_size: "11sp"
+                            bold: True
+
+                    MDButton:
+                        style: "outlined"
+                        size_hint_x: 1
+                        on_release: app.set_magnification("100x")
+                        MDButtonText:
+                            text: "100x"
+                            font_size: "11sp"
+                            bold: True
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: dp(28)
+                    spacing: dp(4)
+                    MDLabel:
+                        text: "Scale (px/um):"
+                        role: "small"
+                        text_color: COLOR_TEXT_SECONDARY
+                        size_hint_x: 0.45
+                    MDTextField:
+                        id: scale_factor_input
+                        text: f"{app.ug_scale_factor:.2f}"
+                        mode: "outlined"
+                        size_hint_x: 0.35
+                        height: dp(28)
+                        input_filter: "float"
+                        multiline: False
+                        on_text_validate: app.set_scale_factor(self.text)
+                    MDLabel:
+                        text: "(0=off)"
+                        role: "small"
+                        text_color: COLOR_TEXT_TERTIARY
+                        size_hint_x: 0.2
+
+            # Phase 6: Export Data Card
+            MDCard:
+                orientation: "vertical"
+                size_hint_y: None
+                height: dp(100)
+                padding: dp(10)
+                spacing: dp(4)
+                md_bg_color: COLOR_BG_SURFACE
+                radius: [dp(6)]
+                line_color: COLOR_BORDER_SUBTLE
+                line_width: dp(0.5)
+
+                MDLabel:
+                    text: "Export Data"
+                    role: "medium"
+                    text_color: COLOR_TEXT_PRIMARY
+                    size_hint_y: None
+                    height: dp(20)
+                    bold: True
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    spacing: dp(6)
+                    size_hint_y: None
+                    height: dp(32)
+
+                    MDButton:
+                        size_hint_x: 1
+                        style: "outlined"
+                        on_release: app.export_csv_data()
+                        MDButtonText:
+                            text: "CSV"
+
+                    MDButton:
+                        size_hint_x: 1
+                        style: "outlined"
+                        on_release: app.export_full_report()
+                        MDButtonText:
+                            text: "JSON Report"
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    spacing: dp(6)
+                    size_hint_y: None
+                    height: dp(32)
+
+                    MDButton:
+                        size_hint_x: 1
+                        style: "outlined"
+                        disabled: not app.ug_has_result
+                        on_release: app.save_annotated_snapshot()
+                        MDButtonText:
+                            text: "Snapshot"
+
+                    MDButton:
+                        size_hint_x: 1
+                        style: "outlined"
+                        disabled: not (app.ug_has_result and app.ug_file_path)
+                        on_release: app.export_annotated_video()
+                        MDButtonText:
+                            text: "Video Export"
+
+
+# ── ModelManagerScreen ────────────────────────────────────────────
+<ModelManagerScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        md_bg_color: COLOR_BG_PRIMARY
+
+        MDTopAppBar:
+            left_action_items: [["arrow-left", lambda *_: app.go("inference", "right")]]
+            MDTopAppBarTitle:
+                text: "Model Manager"
+            MDTopAppBarTrailingButtonContainer:
+                MDIconButton:
+                    icon: "refresh"
+                    on_release: app._scan_models_directory()
+                MDIconButton:
+                    icon: "plus"
+                    on_release: app.mm_add_model_dialog()
+
+        # Phase 7: Model & Provider Info Card
+        MDCard:
+            orientation: "vertical"
+            size_hint_y: None
+            height: dp(80)
+            padding: dp(12)
+            spacing: dp(4)
+            md_bg_color: COLOR_BG_SURFACE
+            radius: [dp(6)]
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(20)
+
+                MDLabel:
+                    text: f"Active: {app.status_model_name}"
+                    role: "medium"
+                    text_color: COLOR_ACCENT_PRIMARY
+                    size_hint_x: 0.6
+
+                MDLabel:
+                    text: f"Provider: {app.status_provider}"
+                    role: "small"
+                    text_color: COLOR_TEXT_SECONDARY
+                    size_hint_x: 0.4
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(28)
+                spacing: dp(8)
+
+                MDButton:
+                    style: "outlined"
+                    size_hint_x: 0.4
+                    on_release: app.reset_all_settings()
+                    MDButtonText:
+                        text: "Reset Defaults"
+
+                MDButton:
+                    style: "outlined"
+                    size_hint_x: 0.4
+                    on_release: app._scan_models_directory()
+                    MDButtonText:
+                        text: "Scan Models"
+
+        ScrollView:
+            MDBoxLayout:
+                id: mm_model_list
+                orientation: "vertical"
+                padding: "12dp"
+                spacing: "10dp"
+                size_hint_y: None
+                height: self.minimum_height
+
+
+# ── UploadGatewayScreen ───────────────────────────────────────────
+<UploadGatewayScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        md_bg_color: COLOR_BG_PRIMARY
+
+        MDTopAppBar:
+            id: ug_toolbar
+            left_action_items: [["arrow-left", lambda *_: app.go("inference", "right")]]
+            MDTopAppBarTitle:
+                text: "Upload & Detect"
+
+        MDRelativeLayout:
+            size_hint_y: 0.40
+            md_bg_color: 0, 0, 0, 0.1
+
+            Image:
+                id: ug_image
+                source: ""
+                size_hint: 1, 1
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                opacity: 1 if app.ug_has_image else 0
+
+            MDBoxLayout:
+                orientation: "vertical"
+                spacing: "12dp"
+                size_hint: None, None
+                size: "250dp", "120dp"
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                opacity: 0 if app.ug_has_image else 1
+                disabled: app.ug_has_image
+
+                MDIcon:
+                    icon: "image-search-outline"
+                    theme_text_color: "Custom"
+                    text_color: COLOR_TEXT_SECONDARY
+                    font_size: "64sp"
+                    halign: "center"
+                    pos_hint: {"center_x": 0.5}
+
+                MDLabel:
+                    text: "No Image/Video Selected"
+                    theme_text_color: "Custom"
+                    text_color: COLOR_TEXT_SECONDARY
+                    halign: "center"
+                    role: "medium"
+
+            MDLabel:
+                text: "Processing..."
+                halign: "center"
+                theme_text_color: "Custom"
+                text_color: COLOR_ACCENT_PRIMARY
+                role: "medium"
+                pos_hint: {"center_x": 0.5, "center_y": 0.5}
+                opacity: 1 if app.ug_processing else 0
+
+        # Phase 4A: Progress indicator (visible during processing)
+        MDBoxLayout:
+            orientation: "vertical"
+            size_hint_y: None
+            height: dp(64) if app.ug_processing_active else dp(0)
+            opacity: 1 if app.ug_processing_active else 0
+            padding: dp(16), dp(8)
+            spacing: dp(4)
+
+            MDBoxLayout:
+                orientation: "horizontal"
+                size_hint_y: None
+                height: dp(20)
+
+                MDLabel:
+                    text: app.ug_frame_text
+                    role: "small"
+                    theme_text_color: "Custom"
+                    text_color: COLOR_TEXT_SECONDARY
+                    halign: "left"
+                    size_hint_x: 0.7
+
+                MDLabel:
+                    text: f"{app.ug_progress}%"
+                    role: "small"
+                    font_name: "RobotoMono"
+                    theme_text_color: "Custom"
+                    text_color: COLOR_ACCENT_PRIMARY
+                    halign: "right"
+                    size_hint_x: 0.3
+
+            MDLinearProgressIndicator:
+                value: app.ug_progress
+                max: 100
+                height: dp(4)
+                color: COLOR_ACCENT_PRIMARY
+
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: "60dp"
+            padding: "16dp"
+            spacing: "16dp"
+            md_bg_color: COLOR_BG_SURFACE
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 1.0
+                height: "44dp"
+                style: "filled"
+                md_bg_color: COLOR_ACCENT_PRIMARY
+                on_release: app.ug_handle_action()
+                MDButtonText:
+                    text: "Select File" if not app.ug_has_image else ("Analyze" if not app.ug_has_result else "New File")
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 0.3
+                height: "44dp"
+                style: "filled"
+                md_bg_color: COLOR_ACCENT_SECONDARY
+                disabled: not app.ug_has_result
+                on_release: app.ug_share()
+                MDButtonText:
+                    text: "Share"
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 0.4
+                height: "44dp"
+                style: "filled"
+                md_bg_color: COLOR_ACCENT_SECONDARY
+                disabled: not app.ug_has_result
+                on_release: app.ug_view_in_inference()
+                MDButtonText:
+                    text: "View Results"
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 0.4
+                height: "44dp"
+                style: "filled"
+                md_bg_color: COLOR_ACCENT_WARN
+                opacity: 1 if app.ug_processing_active else 0
+                disabled: not app.ug_processing_active
+                on_release: app.ug_cancel_processing()
+                MDButtonText:
+                    text: "Stop"
+
+        # Phase 6: Export toolbar row
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: "40dp"
+            padding: ["16dp", "0dp", "16dp", "4dp"]
+            spacing: "10dp"
+            opacity: 1 if app.ug_has_result else 0
+            disabled: not app.ug_has_result
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 1
+                height: "32dp"
+                style: "text"
+                on_release: app.export_csv_data()
+                MDButtonText:
+                    text: "CSV"
+                    font_size: "12sp"
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 1
+                height: "32dp"
+                style: "text"
+                on_release: app.export_full_report()
+                MDButtonText:
+                    text: "Report"
+                    font_size: "12sp"
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 1
+                height: "32dp"
+                style: "text"
+                on_release: app.save_annotated_snapshot()
+                MDButtonText:
+                    text: "Snapshot"
+                    font_size: "12sp"
+
+            MDButton:
+                pos_hint: {"center_y": 0.5}
+                size_hint_x: 1
+                height: "32dp"
+                style: "text"
+                disabled: not app.ug_file_path
+                on_release: app.export_annotated_video()
+                MDButtonText:
+                    text: "Video"
+                    font_size: "12sp"
+
+        ScrollView:
+            size_hint_y: 0.55
+            do_scroll_x: False
+
+            MDBoxLayout:
+                orientation: "vertical"
+                padding: "12dp"
+                spacing: "6dp"
+                size_hint_y: None
+                height: self.minimum_height
+
+                MDBoxLayout:
+                    orientation: "horizontal"
+                    size_hint_y: None
+                    height: "24dp"
+
+                    MDLabel:
+                        id: ug_total_label
+                        text: "Total: 0"
+                        role: "medium"
+                        halign: "left"
+                        text_color: COLOR_TEXT_PRIMARY
+
+                    MDLabel:
+                        id: ug_avg_label
+                        text: "Avg Conf: 0.00"
+                        role: "medium"
+                        halign: "right"
+                        theme_text_color: "Secondary"
+
+                MDDivider:
+                    md_bg_color: COLOR_BORDER_SUBTLE
+
+                GridLayout:
+                    cols: 3
+                    size_hint_y: None
+                    height: "20dp"
+                    spacing: "0dp"
+                    MDLabel:
+                        text: "Type"
+                        bold: True
+                        size_hint_x: 0.4
+                        role: "small"
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        text: "Count"
+                        bold: True
+                        halign: "center"
+                        size_hint_x: 0.3
+                        role: "small"
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        text: "Avg Conf"
+                        bold: True
+                        halign: "center"
+                        size_hint_x: 0.3
+                        role: "small"
+                        text_color: COLOR_TEXT_PRIMARY
+
+                GridLayout:
+                    cols: 3
+                    size_hint_y: None
+                    height: "132dp"
+                    spacing: "0dp"
+                    MDLabel:
+                        text: "PET"
+                        role: "medium"
+                        size_hint_x: 0.4
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_pet_count
+                        text: "0"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_pet_conf
+                        text: "0.00"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        text: "HDPE"
+                        role: "medium"
+                        size_hint_x: 0.4
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_hdpe_count
+                        text: "0"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_hdpe_conf
+                        text: "0.00"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        text: "PVC"
+                        role: "medium"
+                        size_hint_x: 0.4
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_pvc_count
+                        text: "0"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_pvc_conf
+                        text: "0.00"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        text: "LDPE"
+                        role: "medium"
+                        size_hint_x: 0.4
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_ldpe_count
+                        text: "0"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_ldpe_conf
+                        text: "0.00"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        text: "PP"
+                        role: "medium"
+                        size_hint_x: 0.4
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_pp_count
+                        text: "0"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_pp_conf
+                        text: "0.00"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        text: "PS"
+                        role: "medium"
+                        size_hint_x: 0.4
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_ps_count
+                        text: "0"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+                    MDLabel:
+                        id: ug_ps_conf
+                        text: "0.00"
+                        halign: "center"
+                        role: "medium"
+                        size_hint_x: 0.3
+                        text_color: COLOR_TEXT_PRIMARY
+
+                MDDivider:
+                    md_bg_color: COLOR_BORDER_SUBTLE
+
+                MDLabel:
+                    id: ug_perf_stats
+                    text: ""
+                    halign: "center"
+                    theme_text_color: "Secondary"
+                    role: "small"
+                    size_hint_y: None
+                    height: "32dp"
+
+        # Phase 7: Status Ribbon - bottom diagnostics bar
+        MDBoxLayout:
+            orientation: "horizontal"
+            size_hint_y: None
+            height: dp(36)
+            padding: dp(8), dp(4)
+            spacing: dp(12)
+            md_bg_color: COLOR_BG_PANEL
+            radius: [dp(4)]
+
+            MDLabel:
+                text: f"Model: {app.status_model_name}"
+                role: "small"
+                font_name: "RobotoMono"
+                text_color: COLOR_ACCENT_PRIMARY
+                size_hint_x: 0.35
+
+            MDLabel:
+                text: f"Backend: {app.status_provider}"
+                role: "small"
+                font_name: "RobotoMono"
+                text_color: COLOR_ACCENT_SECONDARY
+                size_hint_x: 0.25
+
+            MDLabel:
+                text: f"Mem: {app.status_memory}"
+                role: "small"
+                font_name: "RobotoMono"
+                text_color: COLOR_TEXT_SECONDARY
+                size_hint_x: 0.2
+
+            MDLabel:
+                text: "Ready" if app.status_ready else "No Engine"
+                role: "small"
+                font_name: "RobotoMono"
+                text_color: COLOR_ACCENT_SECONDARY if app.status_ready else COLOR_ACCENT_WARN
+                size_hint_x: 0.2
+
+# ── Gallery Screen ────────────────────────────────────────────────
+<GalleryScreen>:
+    MDBoxLayout:
+        orientation: "vertical"
+        md_bg_color: COLOR_BG_PRIMARY
+
+        MDTopAppBar:
+            left_action_items: [["arrow-left", lambda *_: app.go("inference", "right")]]
+            MDTopAppBarTitle:
+                text: "Gallery"
+
+        ScrollView:
+            MDBoxLayout:
+                id: gallery_list
+                orientation: "vertical"
+                spacing: dp(8)
+                padding: dp(12)
+                size_hint_y: None
+                height: self.minimum_height
+
+# ── Bottom Navigation Bar ─────────────────────────────────────────
+<BottomNavBar@MDBoxLayout>:
+    orientation: "horizontal"
+    size_hint_y: None
+    height: dp(56)
+    md_bg_color: COLOR_BG_PANEL
+    padding: dp(4)
+    spacing: dp(4)
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "inference" else "filled"
+        size_hint_x: 1
+        on_release: app.go("inference", "left") if app._sm and app._sm.current != "inference" else None
+        MDButtonIcon:
+            icon: "camera"
+        MDButtonText:
+            text: "Detect"
+            font_size: "11sp"
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "upload" else "filled"
+        size_hint_x: 1
+        on_release: app.go("upload", "left") if app._sm and app._sm.current != "upload" else None
+        MDButtonIcon:
+            icon: "upload"
+        MDButtonText:
+            text: "Upload"
+            font_size: "11sp"
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "gallery" else "filled"
+        size_hint_x: 1
+        on_release: app.go("gallery", "left") if app._sm and app._sm.current != "gallery" else None
+        MDButtonIcon:
+            icon: "image-multiple"
+        MDButtonText:
+            text: "Gallery"
+            font_size: "11sp"
+
+    MDButton:
+        style: "text" if app._sm and app._sm.current != "models" else "filled"
+        size_hint_x: 1
+        on_release: app.go("models", "left") if app._sm and app._sm.current != "models" else None
+        MDButtonIcon:
+            icon: "cog"
+        MDButtonText:
+            text: "Models"
+            font_size: "11sp"

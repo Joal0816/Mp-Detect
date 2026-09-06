@@ -3,67 +3,56 @@ import os
 import cv2
 import time
 import numpy as np
-import onnxruntime as ort
 from typing import List, Tuple
 
-# Drawing settings
-BOX_THICKNESS = 2
-FONT_SCALE = 0.5
-LABEL_THICKNESS = 1
+from utils.vision import COLORS, BOX_THICKNESS, FONT_SCALE, LABEL_THICKNESS, cv2_letterbox, _iou, nms, xywh_to_xyxy
 
-# Color palette (BGR)
-COLORS = [
-    (0, 0, 255),  # Red     - HDPE
-    (255, 255, 0),  # Cyan    - LDPE
-    (255, 0, 255),  # Magenta - PET
-    (0, 255, 255),  # Yellow  - PP
-    (0, 255, 0),  # Green   - PS
-    (255, 0, 0),  # Blue    - PVC
+try:
+    import onnxruntime as ort
+except ImportError:
+    ort = None
+
+# Phase 7: Execution provider priority order
+_EXECUTION_PROVIDER_PRIORITY = [
+    "CUDAExecutionProvider",
+    "TensorrtExecutionProvider",
+    "DirectMLExecutionProvider",
+    "CPUExecutionProvider",
 ]
 
-
-def cv2_letterbox(img, new_shape=640, color=(114, 114, 114)):
-    h0, w0 = img.shape[:2]
-    if isinstance(new_shape, int):
-        new_shape = (new_shape, new_shape)
-
-    r = min(new_shape[0] / h0, new_shape[1] / w0)
-    new_unpad = (int(round(w0 * r)), int(round(h0 * r)))
-    dw, dh = new_shape[1] - new_unpad[0], new_shape[0] - new_unpad[1]
-    dw /= 2
-    dh /= 2
-
-    if (w0, h0) != new_unpad:
-        img = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
-
-    top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
-    left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
-    padded = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)
-    return padded, (r, r), (left, top)
+# Friendly display names for providers
+_PROVIDER_DISPLAY_NAMES = {
+    "CUDAExecutionProvider": "CUDA (GPU)",
+    "TensorrtExecutionProvider": "TensorRT (GPU)",
+    "DirectMLExecutionProvider": "DirectML (GPU)",
+    "CPUExecutionProvider": "CPU",
+}
 
 
-def _iou(b1, b_arr):
-    x1 = np.maximum(b1[0], b_arr[:, 0])
-    y1 = np.maximum(b1[1], b_arr[:, 1])
-    x2 = np.minimum(b1[2], b_arr[:, 2])
-    y2 = np.minimum(b1[3], b_arr[:, 3])
-    inter = np.clip(x2 - x1, 0, None) * np.clip(y2 - y1, 0, None)
-    a1 = (b1[2] - b1[0]) * (b1[3] - b1[1])
-    a2 = (b_arr[:, 2] - b_arr[:, 0]) * (b_arr[:, 3] - b_arr[:, 1])
-    return inter / (a1 + a2 - inter + 1e-9)
+def detect_available_providers() -> List[str]:
+    """Detect which ONNX Runtime execution providers are available on this system."""
+    if ort is None:
+        return ["CPUExecutionProvider"]
+    available = ort.get_available_providers()
+    return [p for p in _EXECUTION_PROVIDER_PRIORITY if p in available]
 
 
-def nms(boxes: np.ndarray, scores: np.ndarray, iou_thr: float) -> List[int]:
-    idxs = scores.argsort()[::-1]
-    keep = []
-    while idxs.size > 0:
-        i = idxs[0]
-        keep.append(i)
-        if idxs.size == 1:
-            break
-        ious = _iou(boxes[i], boxes[idxs[1:]])
-        idxs = idxs[1:][ious <= iou_thr]
-    return keep
+def select_best_provider() -> str:
+    """Auto-select the optimal execution provider with graceful fallback to CPU."""
+    available = detect_available_providers()
+    if not available:
+        return "CPUExecutionProvider"
+    # Pick highest priority available
+    for provider in _EXECUTION_PROVIDER_PRIORITY:
+        if provider in available:
+            print(f"[Detector] Selected execution provider: {provider}")
+            return provider
+    return "CPUExecutionProvider"
+
+
+def get_provider_display_name(provider: str) -> str:
+    """Return a human-friendly display name for an execution provider."""
+    return _PROVIDER_DISPLAY_NAMES.get(provider, provider)
 
 
 class YOLODetector:
@@ -71,7 +60,26 @@ class YOLODetector:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Missing ONNX: {model_path}")
 
-        self.session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+        # Phase 7: Auto-detect and use the best available execution provider
+        if ort is None:
+            raise ImportError("onnxruntime is required for YOLODetector")
+        self.execution_provider = select_best_provider()
+        providers_to_use = [self.execution_provider]
+        # Always include CPU as fallback
+        if self.execution_provider != "CPUExecutionProvider":
+            providers_to_use.append("CPUExecutionProvider")
+
+        self.session = ort.InferenceSession(model_path, providers=providers_to_use)
+
+        # Verify which provider is actually active (ORT may fall back silently)
+        active_providers = self.session.get_providers()
+        if self.execution_provider in active_providers:
+            self.active_provider = self.execution_provider
+        else:
+            self.active_provider = active_providers[0] if active_providers else "CPUExecutionProvider"
+
+        self.provider_display = get_provider_display_name(self.active_provider)
+        print(f"[Detector] Active provider: {self.provider_display}")
 
         model_inputs = self.session.get_inputs()[0]
         self.input_name = model_inputs.name
@@ -114,14 +122,6 @@ class YOLODetector:
         except Exception:
             pass
         return cap
-
-    def _xywh_to_xyxy(self, xywh):
-        x, y, w, h = xywh[:, 0], xywh[:, 1], xywh[:, 2], xywh[:, 3]
-        x1 = x - w / 2
-        y1 = y - h / 2
-        x2 = x + w / 2
-        y2 = y + h / 2
-        return np.stack([x1, y1, x2, y2], axis=1)
 
     def _empty_summary(self):
         return {"per_class": {c: (0, 0.0) for c in self.classes}, "total": 0, "avg_conf": 0.0}
@@ -219,7 +219,9 @@ class YOLODetector:
 
         return annotated
 
-    def detect(self, bgr_frame):
+    def detect(self, bgr_frame, conf_thresh=None, iou_thresh=None):
+        _conf = conf_thresh if conf_thresh is not None else self.conf_thresh
+        _iou = iou_thresh if iou_thresh is not None else self.iou_thresh
         original_frame = bgr_frame.copy()
 
         rgb = cv2.cvtColor(original_frame, cv2.COLOR_BGR2RGB)
@@ -243,7 +245,7 @@ class YOLODetector:
         confs = cls_scores.max(axis=1)
         cls_ids = cls_scores.argmax(axis=1)
 
-        m = confs >= self.conf_thresh
+        m = confs >= _conf
         boxes_xywh = boxes_xywh[m]
         confs = confs[m]
         cls_ids = cls_ids[m]
@@ -256,7 +258,7 @@ class YOLODetector:
         if boxes_xywh.size > 0:
             boxes_xywh[:, [0, 2]] *= self.input_size
             boxes_xywh[:, [1, 3]] *= self.input_size
-            boxes_xyxy = self._xywh_to_xyxy(boxes_xywh)
+            boxes_xyxy = xywh_to_xyxy(boxes_xywh)
             boxes_xyxy[:, [0, 2]] -= pad[0]
             boxes_xyxy[:, [1, 3]] -= pad[1]
             boxes_xyxy[:, [0, 2]] /= ratio[0]
@@ -266,7 +268,7 @@ class YOLODetector:
             boxes_xyxy[:, [0, 2]] = np.clip(boxes_xyxy[:, [0, 2]], 0, w - 1)
             boxes_xyxy[:, [1, 3]] = np.clip(boxes_xyxy[:, [1, 3]], 0, h - 1)
 
-            keep = nms(boxes_xyxy, confs, self.iou_thresh)
+            keep = nms(boxes_xyxy, confs, _iou)
             boxes_xyxy = boxes_xyxy[keep]
             confs = confs[keep]
             cls_ids = cls_ids[keep]
@@ -370,3 +372,10 @@ class YOLODetector:
             return final_summary, thumbnail_frame
         else:
             return self._empty_summary(), np.zeros((height, width, 3), dtype=np.uint8)
+
+
+Detector = YOLODetector
+
+# Provide explicit infer alias if only detect exists
+if not hasattr(YOLODetector, 'infer') and hasattr(YOLODetector, 'detect'):
+    YOLODetector.infer = YOLODetector.detect
