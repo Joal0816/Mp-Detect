@@ -6,13 +6,33 @@ import os
 SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "..", "settings.json")
 
 DEFAULT_SETTINGS = {
+    # Detection parameters
     "conf": 0.25,
     "iou": 0.45,
     "imgsz": 640,
-    "lighting_mode": "blof",
-    "active_model_id": "",
-    "scale_factor": 0.0,
+    
+    # Camera settings
+    "camera_fps": 15,           # Field-optimized default (10-15 FPS saves battery)
+    "clahe_enabled": True,      # CLAHE for low-light enhancement
+    "clahe_clip_limit": 3.0,    # CLAHE clip limit
+    
+    # Hardware settings
+    "scale_factor": 0.0,        # Pixels per millimeter (0 = uncalibrated)
     "magnification": "10x",
+    
+    # Lighting
+    "lighting_mode": "blof",    # BLOF, UV365, UV395
+    
+    # Model
+    "active_model_id": "",
+    
+    # UI settings
+    "theme": "dark",
+    "high_contrast_mode": False,  # For outdoor sunlight visibility
+    
+    # Session
+    "auto_save_sessions": True,
+    "gps_enabled": True,
 }
 
 
