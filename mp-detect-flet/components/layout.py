@@ -121,8 +121,8 @@ class LeftSidebar:
                                 ft.Text("Media Source", size=14, weight=ft.FontWeight.BOLD),
                                 ft.Row(
                                     [
-                                        ft.ElevatedButton("Open File", icon=ft.Icons.FOLDER_OPEN, on_click=lambda _: self.app.current_screen.pick_file() if hasattr(self.app.current_screen, 'pick_file') else None),
-                                        ft.ElevatedButton("Live Camera", icon=ft.Icons.CAMERA_ALT, on_click=lambda _: self._start_camera()),
+                                        ft.Button("Open File", icon=ft.Icons.FOLDER_OPEN, on_click=lambda _: self.app.current_screen.pick_file() if hasattr(self.app.current_screen, 'pick_file') else None),
+                                        ft.Button("Live Camera", icon=ft.Icons.CAMERA_ALT, on_click=lambda _: self._start_camera()),
                                     ],
                                     spacing=8,
                                 ),
@@ -138,9 +138,9 @@ class LeftSidebar:
                         content=ft.Column(
                             [
                                 ft.Text("Lighting Presets", size=14, weight=ft.FontWeight.BOLD),
-                                ft.ElevatedButton("BLOF", on_click=lambda _: self._set_lighting("blof")),
-                                ft.ElevatedButton("UV 365nm", on_click=lambda _: self._set_lighting("uv_365")),
-                                ft.ElevatedButton("UV 395nm", on_click=lambda _: self._set_lighting("uv_395")),
+                                ft.Button("BLOF", on_click=lambda _: self._set_lighting("blof")),
+                                ft.Button("UV 365nm", on_click=lambda _: self._set_lighting("uv_365")),
+                                ft.Button("UV 395nm", on_click=lambda _: self._set_lighting("uv_395")),
                             ],
                             spacing=4,
                         ),
@@ -238,10 +238,10 @@ class RightInspector:
                         ft.Text("Calibration", size=14, weight=ft.FontWeight.BOLD),
                         ft.Row(
                             [
-                                ft.ElevatedButton("4x", on_click=lambda _: self._set_mag("4x")),
-                                ft.ElevatedButton("10x", on_click=lambda _: self._set_mag("10x")),
-                                ft.ElevatedButton("40x", on_click=lambda _: self._set_mag("40x")),
-                                ft.ElevatedButton("100x", on_click=lambda _: self._set_mag("100x")),
+                                ft.Button("4x", on_click=lambda _: self._set_mag("4x")),
+                                ft.Button("10x", on_click=lambda _: self._set_mag("10x")),
+                                ft.Button("40x", on_click=lambda _: self._set_mag("40x")),
+                                ft.Button("100x", on_click=lambda _: self._set_mag("100x")),
                             ],
                             spacing=4,
                         ),
@@ -268,15 +268,15 @@ class RightInspector:
                         ft.Text("Export Data", size=14, weight=ft.FontWeight.BOLD),
                         ft.Row(
                             [
-                                ft.ElevatedButton("CSV", icon=ft.Icons.TABLE_CHART, on_click=lambda _: self._export("csv")),
-                                ft.ElevatedButton("JSON", icon=ft.Icons.CODE, on_click=lambda _: self._export("json")),
+                                ft.Button("CSV", icon=ft.Icons.TABLE_CHART, on_click=lambda _: self._export("csv")),
+                                ft.Button("JSON", icon=ft.Icons.CODE, on_click=lambda _: self._export("json")),
                             ],
                             spacing=8,
                         ),
                         ft.Row(
                             [
-                                ft.ElevatedButton("Image", icon=ft.Icons.IMAGE, on_click=lambda _: self._export("image")),
-                                ft.ElevatedButton("Video", icon=ft.Icons.VIDEO_FILE, on_click=lambda _: self._export("video")),
+                                ft.Button("Image", icon=ft.Icons.IMAGE, on_click=lambda _: self._export("image")),
+                                ft.Button("Video", icon=ft.Icons.VIDEO_FILE, on_click=lambda _: self._export("video")),
                             ],
                             spacing=8,
                         ),

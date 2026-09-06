@@ -19,6 +19,7 @@ class MPDetectApp:
         self.snackbar = None
         self.nav_bar = None
         self.content_area = None
+        self.file_picker = None
         self.current_screen_name = "upload"
         self.current_screen = None
 
@@ -48,6 +49,10 @@ class MPDetectApp:
         # Snackbar
         self.snackbar = ft.SnackBar(content=ft.Text(""))
         page.overlay.append(self.snackbar)
+
+        # Shared FilePicker (used by upload, inference, model_manager screens)
+        self.file_picker = ft.FilePicker()
+        page.services.append(self.file_picker)
 
         # Content area for screens
         self.content_area = ft.Container(expand=True)

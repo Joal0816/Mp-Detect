@@ -78,13 +78,13 @@ class ResultScreen:
                     content=ft.Column([
                         ft.Text("Export", size=14, weight=ft.FontWeight.BOLD),
                         ft.Row([
-                            ft.ElevatedButton("CSV", icon=ft.Icons.TABLE_CHART,
+                            ft.Button("CSV", icon=ft.Icons.TABLE_CHART,
                                              on_click=lambda _: self._export("csv")),
-                            ft.ElevatedButton("JSON", icon=ft.Icons.CODE,
+                            ft.Button("JSON", icon=ft.Icons.CODE,
                                              on_click=lambda _: self._export("json")),
-                            ft.ElevatedButton("Image", icon=ft.Icons.IMAGE,
+                            ft.Button("Image", icon=ft.Icons.IMAGE,
                                              on_click=lambda _: self._export("image")),
-                            ft.ElevatedButton("Video", icon=ft.Icons.VIDEO_FILE,
+                            ft.Button("Video", icon=ft.Icons.VIDEO_FILE,
                                              on_click=lambda _: self._export("video")),
                         ], spacing=8),
                     ], spacing=8),

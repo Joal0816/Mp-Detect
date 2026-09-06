@@ -18,7 +18,6 @@ class InferenceScreen:
         self.hud_latency = ft.Text("Latency: --ms", color=ft.Colors.CYAN, size=12)
         self.hud_backend = ft.Text("", color=ft.Colors.GREEN, size=12)
         self._has_image = False
-        self.file_picker = None
 
         # Camera state
         self.camera_active = False
@@ -43,29 +42,29 @@ class InferenceScreen:
         self.stat_ps = ft.Text("PS: 0", size=12)
 
     def build_content(self) -> ft.Column:
-        self.detect_button = ft.ElevatedButton(
+        self.detect_button = ft.Button(
             "Detect", icon=ft.Icons.PLAY_ARROW,
-            on_click=lambda _: self.toggle_detection(),
+            on_click=self.toggle_detection,
             bgcolor=ft.Colors.CYAN, color=ft.Colors.WHITE, width=120
         )
-        self.view_results_button = ft.ElevatedButton(
+        self.view_results_button = ft.Button(
             "View Results", icon=ft.Icons.VISIBILITY,
             on_click=lambda _: self.app.go("result"), visible=False
         )
 
         # Camera controls
-        self.start_camera_button = ft.ElevatedButton(
+        self.start_camera_button = ft.Button(
             "Start Camera", icon=ft.Icons.CAMERA_ALT,
             on_click=lambda _: self.start_camera(),
             bgcolor=ft.Colors.GREEN, color=ft.Colors.WHITE
         )
-        self.stop_camera_button = ft.ElevatedButton(
+        self.stop_camera_button = ft.Button(
             "Stop Camera", icon=ft.Icons.STOP,
             on_click=lambda _: self.stop_camera(),
             bgcolor=ft.Colors.RED, color=ft.Colors.WHITE,
             visible=False
         )
-        self.detect_live_button = ft.ElevatedButton(
+        self.detect_live_button = ft.Button(
             "Start Detection", icon=ft.Icons.PLAY_ARROW,
             on_click=lambda _: self.toggle_live_detection(),
             bgcolor=ft.Colors.CYAN, color=ft.Colors.WHITE,
@@ -113,8 +112,8 @@ class InferenceScreen:
                 ft.Container(
                     content=ft.Row([
                         self.detect_button,
-                        ft.ElevatedButton("Open File", icon=ft.Icons.FOLDER_OPEN,
-                                         on_click=lambda _: self._open_file()),
+                        ft.Button("Open File", icon=ft.Icons.FOLDER_OPEN,
+                                  on_click=self._open_file),
                         self.view_results_button,
                     ], spacing=8),
                     padding=8,
@@ -150,23 +149,16 @@ class InferenceScreen:
             expand=True,
         )
 
-    def _open_file(self):
-        if self.file_picker is None:
-            self.file_picker = ft.FilePicker(on_result=self._on_file_result)
-            self.app.page.overlay.append(self.file_picker)
-            self.app.page.update()
-        self.file_picker.pick_files(
+    async def _open_file(self, e=None):
+        files = await self.app.file_picker.pick_files(
             dialog_title="Select Micrograph",
             file_type=ft.FilePickerFileType.CUSTOM,
             allowed_extensions=["png", "jpg", "jpeg", "tif", "tiff", "bmp",
                                "mp4", "avi", "mov", "mkv"],
         )
-
-    def _on_file_result(self, e: ft.FilePickerResultEvent):
-        if e.files and len(e.files) > 0:
-            self._load_image(e.files[0].path)
-            self.app.current_file = e.files[0].path
-        # Don't remove from overlay - reuse for next pick
+        if files and len(files) > 0:
+            self._load_image(files[0].path)
+            self.app.current_file = files[0].path
 
     def _load_image(self, file_path):
         try:
@@ -191,7 +183,7 @@ class InferenceScreen:
 
     # ── File-based detection ──────────────────────────────────────────
 
-    def toggle_detection(self):
+    def toggle_detection(self, e=None):
         if self.app.current_file is None:
             self.app.show_snackbar("No file selected")
             return

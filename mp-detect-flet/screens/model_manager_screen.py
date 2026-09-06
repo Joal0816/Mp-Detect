@@ -8,7 +8,6 @@ class ModelManagerScreen:
     def __init__(self, app):
         self.app = app
         self.model_list = ft.ListView(spacing=10, padding=10, expand=True)
-        self._file_picker = None
 
     def build_content(self) -> ft.Column:
         self.load_models()
@@ -71,8 +70,8 @@ class ModelManagerScreen:
                     ft.Row([ft.Text(f"{'* ' if is_active else ''}{name}", size=14, weight=ft.FontWeight.BOLD if is_active else ft.FontWeight.NORMAL), ft.Text(f"[{fmt}]", size=12, color=ft.Colors.CYAN)], spacing=5),
                     ft.Text(f"ID: {mid}", size=10, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_SURFACE)),
                     ft.Row([
-                        ft.ElevatedButton("SELECT", on_click=lambda _, m=mid: self.select_model(m), visible=not is_active),
-                        ft.ElevatedButton("VALIDATE", on_click=lambda _, p=model.get("path", ""): self.validate_model(p)),
+                        ft.Button("SELECT", on_click=lambda _, m=mid: self.select_model(m), visible=not is_active),
+                        ft.Button("VALIDATE", on_click=lambda _, p=model.get("path", ""): self.validate_model(p)),
                         ft.IconButton(icon=ft.Icons.DELETE, on_click=lambda _, m=mid: self.delete_model(m), visible=not is_active),
                     ], spacing=5),
                 ], spacing=5),
@@ -112,7 +111,7 @@ class ModelManagerScreen:
         dialog = ft.AlertDialog(
             title=ft.Text("Add Model from URL"),
             content=ft.Container(content=ft.Column([url_field, name_field, format_dropdown, labels_field, progress_bar], spacing=10, width=300)),
-            actions=[ft.TextButton("Cancel", on_click=lambda _: self.close_dialog(dialog)), ft.ElevatedButton("Download", on_click=on_add)],
+            actions=[ft.TextButton("Cancel", on_click=lambda _: self.close_dialog(dialog)), ft.Button("Download", on_click=on_add)],
         )
         self.app.page.overlay.append(dialog)
         dialog.open = True
@@ -123,19 +122,14 @@ class ModelManagerScreen:
         self.app.page.overlay.remove(dialog)
         self.app.page.update()
 
-    def show_add_from_file_dialog(self):
-        self._file_picker = ft.FilePicker(on_result=self._on_model_file_result)
-        self.app.page.overlay.append(self._file_picker)
-        self.app.page.update()
-        self._file_picker.pick_files(
+    async def show_add_from_file_dialog(self):
+        files = await self.app.file_picker.pick_files(
             dialog_title="Select Model File",
             file_type=ft.FilePickerFileType.CUSTOM,
             allowed_extensions=["onnx", "tflite"],
         )
-
-    def _on_model_file_result(self, e: ft.FilePickerResultEvent):
-        if e.files and len(e.files) > 0:
-            file_path = e.files[0].path
+        if files and len(files) > 0:
+            file_path = files[0].path
             try:
                 entry = self.app.model_manager.add_model_from_file(file_path, set_active=True)
                 self.app.current_engine = self.app.model_manager.get_active_engine()
@@ -143,11 +137,6 @@ class ModelManagerScreen:
                 self.app.show_snackbar(f"Model added: {entry['name']}")
             except Exception as ex:
                 self.app.show_snackbar(f"Failed: {ex}")
-        # Clean up only this specific FilePicker
-        if self._file_picker and self._file_picker in self.app.page.overlay:
-            self.app.page.overlay.remove(self._file_picker)
-        self._file_picker = None
-        self.app.page.update()
 
     def select_model(self, mid):
         try:

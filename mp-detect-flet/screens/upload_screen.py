@@ -15,13 +15,12 @@ class UploadScreen:
         self.progress_text = ft.Text("", size=12, color=ft.Colors.CYAN)
         self.analyze_button = None
         self.has_image = False
-        self.file_picker = None
 
     def build_content(self) -> ft.Column:
-        self.analyze_button = ft.ElevatedButton(
+        self.analyze_button = ft.Button(
             "Select File",
             icon=ft.Icons.FOLDER_OPEN,
-            on_click=lambda _: self.handle_action(),
+            on_click=self.handle_action,
             bgcolor=ft.Colors.CYAN,
             color=ft.Colors.WHITE,
             expand=True,
@@ -64,10 +63,10 @@ class UploadScreen:
                             ft.Container(
                                 content=ft.Row(
                                     [
-                                        ft.ElevatedButton("CSV", icon=ft.Icons.TABLE_CHART, on_click=lambda _: self._export("csv")),
-                                        ft.ElevatedButton("JSON", icon=ft.Icons.CODE, on_click=lambda _: self._export("json")),
-                                        ft.ElevatedButton("Image", icon=ft.Icons.IMAGE, on_click=lambda _: self._export("image")),
-                                        ft.ElevatedButton("Video", icon=ft.Icons.VIDEO_FILE, on_click=lambda _: self._export("video")),
+                                        ft.Button("CSV", icon=ft.Icons.TABLE_CHART, on_click=lambda _: self._export("csv")),
+                                        ft.Button("JSON", icon=ft.Icons.CODE, on_click=lambda _: self._export("json")),
+                                        ft.Button("Image", icon=ft.Icons.IMAGE, on_click=lambda _: self._export("image")),
+                                        ft.Button("Video", icon=ft.Icons.VIDEO_FILE, on_click=lambda _: self._export("video")),
                                     ],
                                     spacing=8,
                                 ),
@@ -85,30 +84,23 @@ class UploadScreen:
             expand=True,
         )
 
-    def handle_action(self):
+    async def handle_action(self, e=None):
         if not self.selected_file:
-            self.pick_file()
+            await self.pick_file()
         elif not self.app.current_results:
             self.run_detection()
         else:
             self.reset()
 
-    def pick_file(self):
-        if self.file_picker is None:
-            self.file_picker = ft.FilePicker(on_result=self._on_file_result)
-            self.app.page.overlay.append(self.file_picker)
-            self.app.page.update()
-        self.file_picker.pick_files(
+    async def pick_file(self):
+        files = await self.app.file_picker.pick_files(
             dialog_title="Select Micrograph",
             file_type=ft.FilePickerFileType.CUSTOM,
             allowed_extensions=["png", "jpg", "jpeg", "tif", "tiff", "bmp",
                                "mp4", "avi", "mov", "mkv"],
         )
-
-    def _on_file_result(self, e: ft.FilePickerResultEvent):
-        if e.files and len(e.files) > 0:
-            self._load_file(e.files[0].path)
-        # Don't remove from overlay - reuse for next pick
+        if files and len(files) > 0:
+            self._load_file(files[0].path)
 
     def _load_file(self, path):
         self.selected_file = path
